@@ -34,7 +34,7 @@ export default function SignUp() {
               <label className="block text-sm font-semibold text-gray-700 mb-1">Full Name</label>
               <input
                 type="text"
-                placeholder="John Doe"
+                placeholder="Enter Your Full Name"
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none transition-all"
               />
             </div>
@@ -72,7 +72,27 @@ export default function SignUp() {
               Sign In
             </a>
           </p>
-        </div>
+
+          
+{/* OR Divider */}
+<div className="flex items-center my-4">
+  <hr className="flex-grow border-gray-300" />
+  <span className="mx-3 text-gray-500 text-sm">or</span>
+  <hr className="flex-grow border-gray-300" />
+</div>
+
+{/* Google Sign Up Button */}
+<div className="flex justify-center">
+  <button className="flex items-center px-6 py-2 bg-white text-black border border-gray-300 rounded-xl hover:bg-gray-100 transition">
+    <img
+      src="https://www.svgrepo.com/show/475656/google-color.svg"
+      alt="Google"
+      className="w-5 h-5 mr-2"
+    />
+    Sign up with Google
+  </button>
+</div>
+   </div>
       </motion.div>
     </div>
   );
