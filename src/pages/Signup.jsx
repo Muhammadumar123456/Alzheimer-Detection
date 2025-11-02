@@ -1,328 +1,329 @@
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { User, Mail, Lock, CheckCircle, Brain, Sparkles } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
 
-export default function SignUp() {
+export default function Signup() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    username: "",
-    firstName: "",
-    middleName: "",
-    lastName: "",
+    name: "",
     email: "",
-    phone: "",
-    dob: "",
-    gender: "",
-    address: "",
-    city: "",
-    state: "",
-    zip: "",
-    country: "",
-    occupation: "",
-    relationship: "",
-    emergencyName: "",
-    emergencyPhone: "",
     password: "",
     confirmPassword: "",
   });
-  const [photoPreview, setPhotoPreview] = useState(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   function handleChange(e) {
     const { name, value } = e.target;
-    setForm((s) => ({ ...s, [name]: value }));
-  }
-
-  function handlePhotoChange(e) {
-    const file = e.target.files?.[0];
-    if (!file) return setPhotoPreview(null);
-    const url = URL.createObjectURL(file);
-    setPhotoPreview(url);
+    setForm((p) => ({ ...p, [name]: value }));
   }
 
   function handleSubmit(e) {
     e.preventDefault();
+
     if (!acceptedTerms) {
       alert("Please accept the terms and conditions.");
       return;
     }
+
     if (form.password !== form.confirmPassword) {
       alert("Passwords do not match.");
       return;
     }
-    // demo: print form (in real app, send to backend)
-    const safeData = { ...form, photoPreview: !!photoPreview };
-    alert("Form submitted (demo):\n" + JSON.stringify(safeData, null, 2));
-    localStorage.setItem("authToken", "demo");
+
+    // TODO: real signup flow. Demo navigates to home after submit
     navigate("/home");
   }
 
+  // Floating particles animation
+  const particles = [...Array(15)].map((_, i) => ({
+    id: i,
+    size: Math.random() * 8 + 4,
+    left: `${Math.random() * 100}%`,
+    animationDelay: `${Math.random() * 5}s`,
+    duration: Math.random() * 10 + 10
+  }));
+
   return (
-    <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-purple-100 via-purple-50 to-indigo-100 p-4 w-screen overflow-x-hidden">
+    <div className="min-h-screen w-screen flex justify-center items-center bg-gradient-to-br from-purple-200 via-indigo-100 to-purple-300 p-4 overflow-hidden relative">
+      {/* Animated Background Particles */}
+      {particles.map((particle) => (
+        <motion.div
+          key={particle.id}
+          className="absolute bg-white rounded-full opacity-20"
+          style={{
+            width: particle.size,
+            height: particle.size,
+            left: particle.left,
+            top: '-10%'
+          }}
+          animate={{
+            y: ['0vh', '110vh'],
+            x: [0, Math.random() * 100 - 50],
+            opacity: [0, 0.5, 0]
+          }}
+          transition={{
+            duration: particle.duration,
+            repeat: Infinity,
+            delay: parseFloat(particle.animationDelay)
+          }}
+        />
+      ))}
+
+      {/* Animated Brain Icons */}
       <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
+        className="absolute top-10 left-10 text-indigo-300 opacity-20"
+        animate={{ 
+          rotate: [0, 360],
+          scale: [1, 1.2, 1]
+        }}
+        transition={{ duration: 20, repeat: Infinity }}
+      >
+        <Brain size={80} />
+      </motion.div>
+      <motion.div
+        className="absolute bottom-10 right-10 text-purple-300 opacity-20"
+        animate={{ 
+          rotate: [360, 0],
+          scale: [1, 1.3, 1]
+        }}
+        transition={{ duration: 15, repeat: Infinity }}
+      >
+        <Sparkles size={60} />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 50 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="flex flex-col md:flex-row bg-white rounded-3xl shadow-2xl overflow-hidden max-w-6xl w-full mx-4"
+        className="flex flex-col md:flex-row bg-white rounded-3xl shadow-2xl overflow-hidden max-w-5xl w-full relative z-10"
       >
         {/* Left Image Section */}
-        <div className="md:w-1/2 w-full hidden md:block">
-          <img
-            src="https://img.freepik.com/free-vector/autism-man-disorder-illustration-isolated_24911-115123.jpg?semt=ais_hybrid&w=740&q=80"
-            alt="Alzheimer Awareness"
-            className="w-full h-full object-cover"
+        <motion.div 
+          className="md:w-1/2 hidden md:flex justify-center items-center bg-gradient-to-br from-purple-100 to-indigo-100 relative overflow-hidden"
+          initial={{ x: -100, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+        >
+          {/* Animated circles in background */}
+          <motion.div
+            className="absolute w-64 h-64 bg-indigo-200 rounded-full opacity-30"
+            animate={{
+              scale: [1, 1.2, 1],
+              x: [0, 30, 0],
+              y: [0, -20, 0]
+            }}
+            transition={{ duration: 8, repeat: Infinity }}
           />
-        </div>
+          <motion.div
+            className="absolute w-48 h-48 bg-purple-200 rounded-full opacity-30"
+            animate={{
+              scale: [1, 1.3, 1],
+              x: [0, -40, 0],
+              y: [0, 30, 0]
+            }}
+            transition={{ duration: 10, repeat: Infinity }}
+          />
+
+          <motion.img
+            src="https://img.freepik.com/free-vector/autism-man-disorder-illustration-isolated_24911-115123.jpg?w=740"
+            alt="Alzheimer Awareness"
+            className="w-3/4 h-auto rounded-2xl shadow-lg relative z-10"
+            initial={{ scale: 0.8, rotate: -5 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ duration: 1, delay: 0.4 }}
+            whileHover={{ scale: 1.05, rotate: 2 }}
+          />
+        </motion.div>
 
         {/* Right Form Section */}
-        <div className="md:w-1/2 w-full p-6 md:p-10 flex flex-col justify-center">
-          <motion.h2
-            initial={{ opacity: 0, y: -20 }}
+        <div className="md:w-1/2 w-full p-8 md:p-10 flex flex-col justify-center relative">
+          <motion.div
+            initial={{ opacity: 0, y: -30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-3xl md:text-4xl font-bold text-indigo-700 mb-6 text-center md:text-left"
+            transition={{ delay: 0.3, duration: 0.6 }}
           >
-            Create Your Account
-          </motion.h2>
+            <motion.h2
+              className="text-3xl md:text-4xl font-bold text-indigo-700 mb-2 text-center md:text-left"
+              animate={{ 
+                backgroundPosition: ['0%', '100%'],
+              }}
+            >
+              Create Account
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="text-gray-600 mb-6 text-center md:text-left"
+            >
+              Join us in the fight against Alzheimer's
+            </motion.p>
+          </motion.div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Username
-                </label>
-                <input
-                  name="username"
-                  value={form.username}
-                  onChange={handleChange}
-                  type="text"
-                  placeholder="username"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  First Name
-                </label>
-                <input
-                  name="firstName"
-                  value={form.firstName}
-                  onChange={handleChange}
-                  type="text"
-                  placeholder="First name"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Middle Name
-                </label>
-                <input
-                  name="middleName"
-                  value={form.middleName}
-                  onChange={handleChange}
-                  type="text"
-                  placeholder="Middle name"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Last Name
-                </label>
-                <input
-                  name="lastName"
-                  value={form.lastName}
-                  onChange={handleChange}
-                  type="text"
-                  placeholder="Last name"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Email
-                </label>
-                <input
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  type="email"
-                  placeholder="you@example.com"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Phone
-                </label>
-                <input
-                  name="phone"
-                  value={form.phone}
-                  onChange={handleChange}
-                  type="tel"
-                  placeholder="+1 555 555 5555"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Date of Birth
-                </label>
-                <input
-                  name="dob"
-                  value={form.dob}
-                  onChange={handleChange}
-                  type="date"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Gender
+            {/* Name */}
+            <motion.div
+              initial={{ x: -50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+            >
+              <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+                <User size={16} className="text-indigo-600" />
+                Full Name
               </label>
-              <select
-                name="gender"
-                value={form.gender}
+              <motion.input
+                whileFocus={{ scale: 1.02, borderColor: '#6366f1' }}
+                name="name"
+                value={form.name}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-              >
-                <option value="">Prefer not to say</option>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Password
-                </label>
-                <input
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Confirm Password
-                </label>
-                <input
-                  name="confirmPassword"
-                  value={form.confirmPassword}
-                  onChange={handleChange}
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Profile Photo (optional)
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoChange}
-                  className="w-full text-sm"
-                />
-              </div>
-
-              {photoPreview && (
-                <div className="w-20 h-20 rounded-xl overflow-hidden border border-gray-200">
-                  <img
-                    src={photoPreview}
-                    alt="preview"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center">
-              <input
-                id="terms"
-                type="checkbox"
-                checked={acceptedTerms}
-                onChange={(e) => setAcceptedTerms(e.target.checked)}
-                className="h-4 w-4 text-indigo-600 rounded"
+                type="text"
+                placeholder="John Doe"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none transition-all"
+                required
               />
+            </motion.div>
+
+            {/* Email */}
+            <motion.div
+              initial={{ x: -50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+            >
+              <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+                <Mail size={16} className="text-indigo-600" />
+                Email
+              </label>
+              <motion.input
+                whileFocus={{ scale: 1.02, borderColor: '#6366f1' }}
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                type="email"
+                placeholder="you@example.com"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none transition-all"
+                required
+              />
+            </motion.div>
+
+            {/* Password */}
+            <motion.div
+              initial={{ x: -50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
+            >
+              <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+                <Lock size={16} className="text-indigo-600" />
+                Password
+              </label>
+              <motion.input
+                whileFocus={{ scale: 1.02, borderColor: '#6366f1' }}
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                type="password"
+                placeholder="••••••••"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none transition-all"
+                required
+              />
+            </motion.div>
+
+            {/* Confirm Password */}
+            <motion.div
+              initial={{ x: -50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.7, duration: 0.5 }}
+            >
+              <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+                <Lock size={16} className="text-indigo-600" />
+                Confirm Password
+              </label>
+              <motion.input
+                whileFocus={{ scale: 1.02, borderColor: '#6366f1' }}
+                name="confirmPassword"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                type="password"
+                placeholder="••••••••"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none transition-all"
+                required
+              />
+            </motion.div>
+
+            {/* Terms & Conditions */}
+            <motion.div 
+              className="flex items-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+            >
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <input
+                  id="terms"
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="h-4 w-4 text-indigo-600 rounded cursor-pointer"
+                />
+              </motion.div>
               <label
                 htmlFor="terms"
-                className="ml-2 text-sm text-gray-600"
+                className="ml-2 text-sm text-gray-600 flex items-center gap-1"
               >
                 I agree to the{" "}
-                <a
+                <motion.a
                   href="/terms"
                   className="text-indigo-600 hover:underline"
+                  whileHover={{ scale: 1.05 }}
                 >
                   terms & conditions
-                </a>
+                </motion.a>
               </label>
-            </div>
+            </motion.div>
 
+            {/* Submit Button */}
             <motion.button
-              whileHover={{ scale: 1.02 }}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.9 }}
+              whileHover={{ 
+                scale: 1.03,
+                boxShadow: "0 10px 30px rgba(99, 102, 241, 0.4)"
+              }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              className="w-full py-3 mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md transition"
+              className="w-full py-3 mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md transition relative overflow-hidden group"
             >
-              Sign Up
+              <motion.span className="relative z-10 flex items-center justify-center gap-2">
+                Sign Up
+                <CheckCircle size={18} />
+              </motion.span>
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                initial={{ x: '-100%' }}
+                whileHover={{ x: 0 }}
+              />
             </motion.button>
           </form>
 
-          <p className="text-center text-gray-500 text-sm mt-4">
+          <motion.p 
+            className="text-center text-gray-500 text-sm mt-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1 }}
+          >
             Already have an account?{" "}
-            <Link to="/login" className="text-indigo-600 hover:underline">
+            <motion.a 
+              href="/login" 
+              className="text-indigo-600 hover:underline font-medium"
+              whileHover={{ scale: 1.05 }}
+            >
               Sign In
-            </Link>
-          </p>
-
-          {/* OR Divider */}
-          <div className="flex items-center my-4">
-            <hr className="flex-grow border-gray-300" />
-            <span className="mx-3 text-gray-500 text-sm">or</span>
-            <hr className="flex-grow border-gray-300" />
-          </div>
-
-          {/* Google Sign Up Button */}
-          <div className="flex justify-center">
-            <button className="flex items-center px-6 py-2 bg-white text-black border border-gray-300 rounded-xl hover:bg-gray-100 transition">
-              <img
-                src="https://www.svgrepo.com/show/475656/google-color.svg"
-                alt="Google"
-                className="w-5 h-5 mr-2"
-              />
-              Sign up with Google
-            </button>
-          </div>
+            </motion.a>
+          </motion.p>
         </div>
       </motion.div>
     </div>
