@@ -436,9 +436,6 @@ import { AnimatePresence } from 'framer-motion';
 import NavBar from '../components/Navbar';
 import Sidebar from "../components/Sidebar";
 import HeroSection from "../components/HeroSection";
-
-
-
 import FloatingIcons from '../components/FloatingIcons';
 import FeatureCards from '../components/FeatureCards';
 import StatsSection from '../components/StatsSection';
@@ -481,7 +478,13 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 overflow-x-hidden relative">
       <NavBar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeSection={activeSection} scrollToSection={scrollToSection} />
       <AnimatePresence>
-        {isSidebarOpen && <Sidebar setIsSidebarOpen={setIsSidebarOpen} handleLogout={handleLogout} />}
+       {isSidebarOpen && (
+  <Sidebar
+    isSidebarOpen={isSidebarOpen}
+    setIsSidebarOpen={setIsSidebarOpen}
+    handleLogout={handleLogout}
+  />
+)}
       </AnimatePresence>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
