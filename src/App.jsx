@@ -3,15 +3,21 @@
 // import Login from "./pages/Login";
 // import Signup from "./pages/Signup";
 // import Home from "./pages/Home";
+// import CognitiveTest from "./pages/CognitiveTest";
+// import Results from "./pages/Results";
+// import UploadMRI from "./pages/UploadMRI";
 
 // function App() {
 //   return (
 //     <Router>
 //       <Routes>
-//         <Route path="/" element={<Login />} />
+//         <Route path="/" element={<Home />} />
 //         <Route path="/login" element={<Login />} />
 //         <Route path="/signup" element={<Signup />} />
 //         <Route path="/home" element={<Home />} />
+//         <Route path="/cognitive-test" element={<CognitiveTest />} />
+//         <Route path="/results" element={<Results />} />
+//         <Route path="/upload-mri" element={<UploadMRI />} />
 //       </Routes>
 //     </Router>
 //   );
@@ -33,10 +39,14 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Login />} />
+        {/* DEFAULT PAGE SHOULD BE HOME */}
+        <Route path="/" element={<Home />} />
+
+        {/* AUTH ROUTES */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/home" element={<Home />} />
+
+        {/* MAIN APP ROUTES */}
         <Route path="/cognitive-test" element={<CognitiveTest />} />
         <Route path="/results" element={<Results />} />
         <Route path="/upload-mri" element={<UploadMRI />} />
