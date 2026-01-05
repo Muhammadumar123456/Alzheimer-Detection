@@ -54,7 +54,7 @@ export default function Login() {
       {/* Floating decorative icons */}
       <motion.div
         className="absolute top-20 left-20 text-purple-400 opacity-20"
-        animate={{ 
+        animate={{
           rotate: [0, 360],
           scale: [1, 1.3, 1],
           y: [0, -20, 0]
@@ -65,7 +65,7 @@ export default function Login() {
       </motion.div>
       <motion.div
         className="absolute bottom-20 right-20 text-indigo-400 opacity-20"
-        animate={{ 
+        animate={{
           rotate: [360, 0],
           scale: [1, 1.4, 1],
           x: [0, 20, 0]
@@ -76,7 +76,7 @@ export default function Login() {
       </motion.div>
       <motion.div
         className="absolute top-1/3 right-10 text-purple-300 opacity-15"
-        animate={{ 
+        animate={{
           rotate: [0, 180, 360],
           y: [0, 30, 0]
         }}
@@ -86,7 +86,7 @@ export default function Login() {
       </motion.div>
       <motion.div
         className="absolute bottom-1/3 left-10 text-pink-300 opacity-15"
-        animate={{ 
+        animate={{
           scale: [1, 1.2, 1],
           rotate: [0, 90, 0]
         }}
@@ -102,7 +102,7 @@ export default function Login() {
         className="flex flex-col md:flex-row bg-white rounded-3xl shadow-2xl overflow-hidden max-w-5xl w-full mx-auto relative z-10"
       >
         {/* Left Image Section */}
-        <motion.div 
+        <motion.div
           className="md:w-1/2 w-full flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-100 p-8 relative overflow-hidden"
           initial={{ x: -100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
@@ -186,8 +186,8 @@ export default function Login() {
                 Email
               </label>
               <motion.input
-                whileFocus={{ 
-                  scale: 1.02, 
+                whileFocus={{
+                  scale: 1.02,
                   borderColor: '#6366f1',
                   boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)'
                 }}
@@ -210,8 +210,8 @@ export default function Login() {
                 Password
               </label>
               <motion.input
-                whileFocus={{ 
-                  scale: 1.02, 
+                whileFocus={{
+                  scale: 1.02,
                   borderColor: '#6366f1',
                   boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)'
                 }}
@@ -244,7 +244,7 @@ export default function Login() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.7 }}
-              whileHover={{ 
+              whileHover={{
                 scale: 1.03,
                 boxShadow: "0 15px 35px rgba(99, 102, 241, 0.4)"
               }}
@@ -265,15 +265,15 @@ export default function Login() {
             </motion.button>
           </div>
 
-          <motion.p 
+          <motion.p
             className="text-center text-gray-500 text-sm mt-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
           >
             Don't have an account?{" "}
-            <motion.a 
-              href="/signup" 
+            <motion.a
+              href="/signup"
               className="text-indigo-600 hover:underline font-medium"
               whileHover={{ scale: 1.05 }}
             >
@@ -282,7 +282,7 @@ export default function Login() {
           </motion.p>
 
           {/* OR Divider */}
-          <motion.div 
+          <motion.div
             className="flex items-center my-6"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -294,15 +294,15 @@ export default function Login() {
           </motion.div>
 
           {/* Google Sign In Button */}
-          <motion.div 
+          <motion.div
             className="flex justify-center"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1 }}
           >
-            <motion.button 
+            <motion.button
               className="flex items-center px-6 py-2 bg-white text-black border border-gray-300 rounded-xl hover:bg-gray-100 transition relative overflow-hidden group"
-              whileHover={{ 
+              whileHover={{
                 scale: 1.05,
                 boxShadow: "0 8px 20px rgba(0,0,0,0.1)"
               }}
@@ -329,3 +329,6 @@ export default function Login() {
     </div>
   );
 }
+
+
+
