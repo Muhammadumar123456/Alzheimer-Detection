@@ -260,3 +260,5 @@ export default function UploadMRI() {
     </div>
   );
 }
+/ /   c o m m i t :   U p l o a d M R I   w i t h   d r a g - a n d - d r o p ,   p r e v i e w ,   v a l i d a t i o n  
+ 
