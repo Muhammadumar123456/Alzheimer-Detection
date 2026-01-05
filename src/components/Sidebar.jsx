@@ -12,7 +12,7 @@ import {
   LogOut,
   User
 } from 'lucide-react';
-// commit for tracking purposes
+
 
 
 export default function Sidebar({ isSidebarOpen, setIsSidebarOpen, handleLogout }) {
