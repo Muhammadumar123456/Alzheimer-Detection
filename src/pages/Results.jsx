@@ -185,4 +185,5 @@ export default function Results() {
       </div>
     </div>
   );
-}
+}/ /   c o m m i t :   R e s u l t s   p a g e   w i t h   r i s k   l e v e l s ,   r e c o m m e n d a t i o n s ,   t i m e s t a m p  
+ 
