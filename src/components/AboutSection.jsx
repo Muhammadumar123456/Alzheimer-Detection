@@ -251,5 +251,3 @@ export default function AboutSection() {
     </motion.section>
   );
 }
-/ /   c o m m i t :   A b o u t S e c t i o n   w i t h   F Y P   c o n t e x t ,   o b j e c t i v e s ,   t e a m   i n f o  
- 

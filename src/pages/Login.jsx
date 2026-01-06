@@ -1,17 +1,37 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Mail, Lock, LogIn, Brain, Sparkles, Zap, Heart } from "lucide-react";
+import { Mail, Lock, LogIn, Brain, Sparkles, Zap, Heart, AlertCircle } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth(); // Get login function from AuthContext
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleLogin(e) {
+  // ============================================================================
+  // AUTHENTICATION HANDLER: Real login logic with error handling
+  // ============================================================================
+  async function handleLogin(e) {
     e.preventDefault();
-    // TODO: validate / call API — demo navigates to home
-    navigate("/home");
+    setError(""); // Clear previous errors
+    setLoading(true);
+
+    try {
+      // Call the login function from AuthContext
+      await login(email, password);
+
+      // Success: Navigate to dashboard
+      navigate("/dashboard");
+    } catch (err) {
+      // Handle errors (validation, network, etc.)
+      setError(err.message || "Failed to login. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   // Floating particles
@@ -223,6 +243,18 @@ export default function Login() {
               />
             </motion.div>
 
+            {/* Error Message Display */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2"
+              >
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-700">{error}</p>
+              </motion.div>
+            )}
+
             {/* Forgot Password */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -244,24 +276,41 @@ export default function Login() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.7 }}
-              whileHover={{
+              whileHover={!loading ? {
                 scale: 1.03,
                 boxShadow: "0 15px 35px rgba(99, 102, 241, 0.4)"
-              }}
-              whileTap={{ scale: 0.97 }}
+              } : {}}
+              whileTap={!loading ? { scale: 0.97 } : {}}
               onClick={handleLogin}
-              className="w-full py-3 mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md transition relative overflow-hidden group"
+              disabled={loading}
+              className={`w-full py-3 mt-4 ${loading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'
+                } text-white font-semibold rounded-xl shadow-md transition relative overflow-hidden group`}
             >
               <motion.span className="relative z-10 flex items-center justify-center gap-2">
-                Log In
-                <LogIn size={18} />
+                {loading ? (
+                  <>
+                    <motion.div
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    />
+                    Logging in...
+                  </>
+                ) : (
+                  <>
+                    Log In
+                    <LogIn size={18} />
+                  </>
+                )}
               </motion.span>
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600"
-                initial={{ x: '-100%' }}
-                whileHover={{ x: 0 }}
-                transition={{ duration: 0.3 }}
-              />
+              {!loading && (
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600"
+                  initial={{ x: '-100%' }}
+                  whileHover={{ x: 0 }}
+                  transition={{ duration: 0.3 }}
+                />
+              )}
             </motion.button>
           </div>
 

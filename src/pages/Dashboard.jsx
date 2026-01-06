@@ -133,14 +133,14 @@ export default function Dashboard() {
                         >
                             <div className="flex items-center justify-between mb-3">
                                 <div className={`p-2 rounded-lg ${stat.color === "green" ? "bg-green-100" :
-                                        stat.color === "blue" ? "bg-blue-100" :
-                                            stat.color === "purple" ? "bg-purple-100" :
-                                                "bg-orange-100"
+                                    stat.color === "blue" ? "bg-blue-100" :
+                                        stat.color === "purple" ? "bg-purple-100" :
+                                            "bg-orange-100"
                                     }`}>
                                     <stat.icon className={`w-6 h-6 ${stat.color === "green" ? "text-green-600" :
-                                            stat.color === "blue" ? "text-blue-600" :
-                                                stat.color === "purple" ? "text-purple-600" :
-                                                    "text-orange-600"
+                                        stat.color === "blue" ? "text-blue-600" :
+                                            stat.color === "purple" ? "text-purple-600" :
+                                                "text-orange-600"
                                         }`} />
                                 </div>
                             </div>
@@ -272,6 +272,3 @@ export default function Dashboard() {
         </div>
     );
 }
-/ /   c o m m i t :   D a s h b o a r d   w i t h   s t a t s ,   q u i c k   a c c e s s   c a r d s ,   r e c e n t   a c t i v i t y  
- / /   c o m m i t :   D a s h b o a r d   w i t h   s t a t s ,   q u i c k   a c c e s s   c a r d s ,   r e c e n t   a c t i v i t y  
- 

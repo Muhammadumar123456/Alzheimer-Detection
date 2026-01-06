@@ -211,10 +211,10 @@ export default function UploadMRI() {
             whileHover={!uploading && !uploaded ? { scale: 1.02 } : {}}
             whileTap={!uploading && !uploaded ? { scale: 0.98 } : {}}
             className={`w-full py-4 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 ${uploading || uploaded
-                ? "bg-gray-400 cursor-not-allowed"
-                : selectedFile
-                  ? "bg-indigo-600 hover:bg-indigo-700 text-white"
-                  : "bg-gray-300 cursor-not-allowed text-gray-500"
+              ? "bg-gray-400 cursor-not-allowed"
+              : selectedFile
+                ? "bg-indigo-600 hover:bg-indigo-700 text-white"
+                : "bg-gray-300 cursor-not-allowed text-gray-500"
               }`}
           >
             {uploading ? (
@@ -260,5 +260,3 @@ export default function UploadMRI() {
     </div>
   );
 }
-/ /   c o m m i t :   U p l o a d M R I   w i t h   d r a g - a n d - d r o p ,   p r e v i e w ,   v a l i d a t i o n  
- 

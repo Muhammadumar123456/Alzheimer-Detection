@@ -70,8 +70,8 @@ export default function Results() {
             animate={{ scale: 1 }}
             transition={{ type: "spring", delay: 0.2 }}
             className={`mx-auto mb-8 p-8 rounded-2xl ${riskColor === "green" ? "bg-green-50 border-2 border-green-200" :
-                riskColor === "yellow" ? "bg-yellow-50 border-2 border-yellow-200" :
-                  "bg-red-50 border-2 border-red-200"
+              riskColor === "yellow" ? "bg-yellow-50 border-2 border-yellow-200" :
+                "bg-red-50 border-2 border-red-200"
               }`}
           >
             <div className="flex flex-col items-center gap-4">
@@ -84,8 +84,8 @@ export default function Results() {
               </motion.div>
 
               <h3 className={`text-2xl font-bold ${riskColor === "green" ? "text-green-700" :
-                  riskColor === "yellow" ? "text-yellow-700" :
-                    "text-red-700"
+                riskColor === "yellow" ? "text-yellow-700" :
+                  "text-red-700"
                 }`}>
                 {riskLevel}
               </h3>
@@ -185,5 +185,4 @@ export default function Results() {
       </div>
     </div>
   );
-}/ /   c o m m i t :   R e s u l t s   p a g e   w i t h   r i s k   l e v e l s ,   r e c o m m e n d a t i o n s ,   t i m e s t a m p  
- 
+}
