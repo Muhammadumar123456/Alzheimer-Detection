@@ -219,9 +219,9 @@ def predict():
     preds = fusion_model.predict([mri_feat, cog_feat], verbose=0)
     idx = np.argmax(preds)
 
+    # Show only the predicted class, no confidence
     result_label.config(
-        text=f"Prediction: {CLASSES[idx]}\n"
-             f"Confidence: {preds[0][idx] * 100:.2f}%"
+        text=f"Prediction: {CLASSES[idx]}"
     )
 
 tk.Button(root, text="Predict Disease",

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     Home,
     Upload,
@@ -11,12 +11,15 @@ import {
     Activity,
     Clock,
     CheckCircle,
-    ArrowRight
+    ArrowRight,
+    Menu
 } from "lucide-react";
+import Sidebar from "../components/Sidebar";
 
 export default function Dashboard() {
     const navigate = useNavigate();
     const userName = "Guest User"; // Mock user name
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     // Mock statistics
     const stats = [
@@ -84,10 +87,31 @@ export default function Dashboard() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+            {/* Sidebar (same as Home screen) */}
+            <AnimatePresence>
+                {isSidebarOpen && (
+                    <Sidebar
+                        isSidebarOpen={isSidebarOpen}
+                        setIsSidebarOpen={setIsSidebarOpen}
+                        handleLogout={() => { }}
+                    />
+                )}
+            </AnimatePresence>
+
             {/* Header */}
             <div className="w-full bg-white shadow-md">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
+                        {/* Menu button (three lines) - same behavior as on Home screen */}
+                        <motion.button
+                            whileHover={{ scale: 1.1, rotate: 10 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setIsSidebarOpen((prev) => !prev)}
+                            className="p-3 rounded-md bg-indigo-300 hover:bg-indigo-400 text-white transition-colors shadow-sm"
+                        >
+                            <Menu className="w-6 h-6" />
+                        </motion.button>
+
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
