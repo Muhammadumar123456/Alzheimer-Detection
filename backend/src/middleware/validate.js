@@ -1,0 +1,244 @@
+/**
+ * =============================================================================
+ * INPUT VALIDATION MIDDLEWARE
+ * =============================================================================
+ * Lightweight schema-based request body validation.
+ * No external library — uses plain JS objects as schemas.
+ *
+ * Usage:
+ *   const { validate, schemas } = require('./validate');
+ *   router.post('/register', validate(schemas.register), controller.register);
+ * =============================================================================
+ */
+
+const { sendError } = require('../utils/responseHelper');
+
+// =========================================================================
+// VALIDATION SCHEMAS
+// =========================================================================
+
+const schemas = {
+    register: {
+        name: {
+            required: true,
+            type: 'string',
+            minLength: 2,
+            maxLength: 50,
+            label: 'Name',
+        },
+        email: {
+            required: true,
+            type: 'string',
+            match: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+            label: 'Email',
+        },
+        password: {
+            required: true,
+            type: 'string',
+            minLength: 8,
+            passwordMatch: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?~`])/,
+            label: 'Password',
+        },
+    },
+
+    login: {
+        email: {
+            required: true,
+            type: 'string',
+            label: 'Email',
+        },
+        password: {
+            required: true,
+            type: 'string',
+            label: 'Password',
+        },
+    },
+
+    updateProfile: {
+        name: {
+            required: false,
+            type: 'string',
+            minLength: 2,
+            maxLength: 50,
+            label: 'Name',
+        },
+        email: {
+            required: false,
+            type: 'string',
+            match: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+            label: 'Email',
+        },
+    },
+
+    cognitiveSubmit: {
+        mmseScore: {
+            required: true,
+            type: 'number',
+            min: 0,
+            max: 30,
+            label: 'MMSE Score',
+        },
+        mocaScore: {
+            required: true,
+            type: 'number',
+            min: 0,
+            max: 30,
+            label: 'MoCA Score',
+        },
+        memoryScore: {
+            required: true,
+            type: 'number',
+            min: 0,
+            max: 100,
+            label: 'Memory Score',
+        },
+        languageScore: {
+            required: true,
+            type: 'number',
+            min: 0,
+            max: 100,
+            label: 'Language Score',
+        },
+        attentionScore: {
+            required: true,
+            type: 'number',
+            min: 0,
+            max: 100,
+            label: 'Attention Score',
+        },
+    },
+
+    storePrediction: {
+        mriScanId: {
+            required: true,
+            type: 'string',
+            label: 'MRI Scan ID',
+        },
+        cognitiveTestId: {
+            required: true,
+            type: 'string',
+            label: 'Cognitive Test ID',
+        },
+        prediction: {
+            required: true,
+            type: 'string',
+            label: 'Prediction',
+        },
+        confidence: {
+            required: true,
+            type: 'number',
+            min: 0,
+            max: 1,
+            label: 'Confidence',
+        },
+    },
+
+    changePassword: {
+        currentPassword: {
+            required: true,
+            type: 'string',
+            label: 'Current Password',
+        },
+        newPassword: {
+            required: true,
+            type: 'string',
+            minLength: 8,
+            passwordMatch: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?~`])/,
+            label: 'New Password',
+        },
+    },
+};
+
+// =========================================================================
+// VALIDATION ENGINE
+// =========================================================================
+
+/**
+ * Validate a value against a single field rule.
+ * @param {string} field - Field name
+ * @param {*} value - Value from req.body
+ * @param {object} rules - Validation rules for this field
+ * @returns {string|null} - Error message or null
+ */
+const validateField = (field, value, rules) => {
+    const label = rules.label || field;
+
+    // Required check
+    if (rules.required && (value === undefined || value === null || value === '')) {
+        return `${label} is required`;
+    }
+
+    // If field is not required and not provided, skip further checks
+    if (value === undefined || value === null || value === '') {
+        return null;
+    }
+
+    // Type check
+    if (rules.type && typeof value !== rules.type) {
+        return `${label} must be a ${rules.type}`;
+    }
+
+    // String-specific checks
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+
+        if (rules.minLength && trimmed.length < rules.minLength) {
+            return `${label} must be at least ${rules.minLength} characters`;
+        }
+
+        if (rules.maxLength && trimmed.length > rules.maxLength) {
+            return `${label} must not exceed ${rules.maxLength} characters`;
+        }
+
+        if (rules.match && !rules.match.test(trimmed)) {
+            return `${label} is not valid`;
+        }
+
+        if (rules.passwordMatch && !rules.passwordMatch.test(trimmed)) {
+            return `${label} must contain at least one uppercase letter, one lowercase letter, one number, and one special character`;
+        }
+    }
+
+    // Number-specific checks
+    if (typeof value === 'number') {
+        if (rules.min !== undefined && value < rules.min) {
+            return `${label} must be at least ${rules.min}`;
+        }
+
+        if (rules.max !== undefined && value > rules.max) {
+            return `${label} must not exceed ${rules.max}`;
+        }
+    }
+
+    return null;
+};
+
+// =========================================================================
+// MIDDLEWARE FACTORY
+// =========================================================================
+
+/**
+ * Returns Express middleware that validates req.body against the given schema.
+ * @param {object} schema - Validation schema object
+ * @returns {Function} Express middleware
+ */
+const validate = (schema) => {
+    return (req, res, next) => {
+        const errors = [];
+
+        for (const [field, rules] of Object.entries(schema)) {
+            const error = validateField(field, req.body[field], rules);
+            if (error) {
+                errors.push({ field, message: error });
+            }
+        }
+
+        if (errors.length > 0) {
+            return sendError(res, 400, 'Validation failed', errors);
+        }
+
+        next();
+    };
+};
+
+module.exports = { validate, schemas };
