@@ -71,40 +71,12 @@ const schemas = {
     },
 
     cognitiveSubmit: {
-        mmseScore: {
+        rawAnswers: {
             required: true,
-            type: 'number',
-            min: 0,
-            max: 30,
-            label: 'MMSE Score',
-        },
-        mocaScore: {
-            required: true,
-            type: 'number',
-            min: 0,
-            max: 30,
-            label: 'MoCA Score',
-        },
-        memoryScore: {
-            required: true,
-            type: 'number',
-            min: 0,
-            max: 100,
-            label: 'Memory Score',
-        },
-        languageScore: {
-            required: true,
-            type: 'number',
-            min: 0,
-            max: 100,
-            label: 'Language Score',
-        },
-        attentionScore: {
-            required: true,
-            type: 'number',
-            min: 0,
-            max: 100,
-            label: 'Attention Score',
+            isArray: true,
+            arrayLength: 30,
+            arrayItemValues: [0, 1],
+            label: 'Cognitive Answers',
         },
     },
 
@@ -207,6 +179,21 @@ const validateField = (field, value, rules) => {
 
         if (rules.max !== undefined && value > rules.max) {
             return `${label} must not exceed ${rules.max}`;
+        }
+    }
+
+    // Array-specific checks
+    if (rules.isArray) {
+        if (!Array.isArray(value)) {
+            return `${label} must be an array`;
+        }
+
+        if (rules.arrayLength !== undefined && value.length !== rules.arrayLength) {
+            return `${label} must contain exactly ${rules.arrayLength} items`;
+        }
+
+        if (rules.arrayItemValues && !value.every((item) => rules.arrayItemValues.includes(item))) {
+            return `${label} contains invalid values. Allowed: ${rules.arrayItemValues.join(', ')}`;
         }
     }
 

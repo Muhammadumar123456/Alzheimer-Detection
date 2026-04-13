@@ -14,15 +14,50 @@ const { paginateQuery } = require('../../utils/paginate');
 
 /**
  * Submit a new cognitive test result
+ *
+ * Accepts rawAnswers (30 binary values) and auto-computes derived clinical
+ * scores for display purposes.  Scores are INVERTED so that higher
+ * percentages mean healthier (fewer symptoms reported).
+ *
+ * Domain-to-index mapping (must match ML training order from testing_gui.py):
+ *   Memory (MOCA / ADAS-Cog)           → indices 0–7   (8 questions)
+ *   Attention & Processing Speed (MOCA) → indices 8–13  (6 questions)
+ *   Executive Function (ADAS-Cog)       → indices 14–19 (6 questions)
+ *   Language (ADAS-Cog)                 → indices 20–23 (4 questions)
+ *   Orientation (MOCA)                  → indices 24–26 (3 questions)
+ *   Daily Functioning (CDRSB / ADL)     → indices 27–29 (3 questions)
+ *
  * @param {string} userId - Mongoose User ID
- * @param {object} testData - Cognitive test scores
+ * @param {object} testData - { rawAnswers: number[], mriUploadId?, notes? }
  * @returns {Promise<object>} Created cognitive test document
  */
 exports.submitTest = async (userId, testData) => {
-    const { mmseScore, mocaScore, memoryScore, languageScore, attentionScore, notes, mriUploadId } = testData;
+    const { rawAnswers, notes, mriUploadId } = testData;
+
+    // Helper: sum a slice of the rawAnswers array
+    const sumRange = (start, end) =>
+        rawAnswers.slice(start, end + 1).reduce((a, b) => a + b, 0);
+
+    // Total symptoms reported (0 = best, 30 = worst)
+    const totalScore = rawAnswers.reduce((a, b) => a + b, 0);
+
+    // Inverted domain scores: higher % = healthier (fewer symptoms)
+    const memorySymptoms    = sumRange(0, 7);    // 8 questions
+    const attentionSymptoms = sumRange(8, 13);   // 6 questions
+    const languageSymptoms  = sumRange(20, 23);  // 4 questions
+
+    const memoryScore    = Math.round(((8 - memorySymptoms) / 8) * 100);
+    const attentionScore = Math.round(((6 - attentionSymptoms) / 6) * 100);
+    const languageScore  = Math.round(((4 - languageSymptoms) / 4) * 100);
+
+    // MMSE/MoCA mapped to 0–30 scale (inverted: 30 = no symptoms)
+    const mmseScore = 30 - totalScore;
+    const mocaScore = 30 - totalScore;
 
     const cognitiveTest = await CognitiveTest.create({
         user: userId,
+        rawAnswers,
+        totalScore,
         mmseScore,
         mocaScore,
         memoryScore,
@@ -32,7 +67,7 @@ exports.submitTest = async (userId, testData) => {
         mriUpload: mriUploadId,
     });
 
-    logger.info(`Cognitive test submitted by user ${userId} (ID: ${cognitiveTest._id})`);
+    logger.info(`Cognitive test submitted by user ${userId} (ID: ${cognitiveTest._id}), symptoms: ${totalScore}/30`);
 
     return cognitiveTest;
 };

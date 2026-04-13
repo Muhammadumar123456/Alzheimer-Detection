@@ -60,7 +60,7 @@ exports.getResultsByUser = async (userId, paginationParams) => {
             populate: [
                 { path: 'user', select: 'name email' },
                 { path: 'mriScan', select: 'fileName uploadedAt' },
-                { path: 'cognitiveTest', select: 'mmseScore mocaScore memoryScore languageScore attentionScore submittedAt' },
+                { path: 'cognitiveTest', select: 'rawAnswers totalScore mmseScore mocaScore memoryScore languageScore attentionScore submittedAt' },
             ],
         }
     );

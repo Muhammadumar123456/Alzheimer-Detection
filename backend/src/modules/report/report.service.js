@@ -34,13 +34,13 @@ exports.generateReport = async (userId) => {
     // 3. Get cognitive tests
     const cognitiveTests = await CognitiveTest.find({ user: userId })
         .sort({ submittedAt: -1 })
-        .select('mmseScore mocaScore memoryScore languageScore attentionScore notes submittedAt');
+        .select('totalScore mmseScore mocaScore memoryScore languageScore attentionScore notes submittedAt');
 
     // 4. Get prediction results
     const predictions = await Result.find({ user: userId })
         .sort({ createdAt: -1 })
         .populate('mriScan', 'fileName uploadedAt')
-        .populate('cognitiveTest', 'mmseScore mocaScore submittedAt')
+        .populate('cognitiveTest', 'totalScore mmseScore mocaScore submittedAt')
         .select('prediction confidence modelVersion details createdAt');
 
     // 5. Compute summary statistics
@@ -69,6 +69,7 @@ exports.generateReport = async (userId) => {
                 : null,
             latestCognitiveScores: latestCognitive
                 ? {
+                      total: latestCognitive.totalScore,
                       mmse: latestCognitive.mmseScore,
                       moca: latestCognitive.mocaScore,
                       memory: latestCognitive.memoryScore,
