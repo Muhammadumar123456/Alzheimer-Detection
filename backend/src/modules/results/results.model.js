@@ -31,8 +31,8 @@ const resultsSchema = new mongoose.Schema(
             type: String,
             required: [true, 'Prediction class is required'],
             enum: {
-                values: ['CN', 'MCI', 'AD'],
-                message: '{VALUE} is not a valid prediction. Use CN, MCI, or AD.',
+                values: ['AD', 'CN', 'EMCI', 'LMCI'],
+                message: '{VALUE} is not a valid prediction. Use AD, CN, EMCI, or LMCI.',
             },
         },
         confidence: {
@@ -41,10 +41,20 @@ const resultsSchema = new mongoose.Schema(
             min: [0, 'Confidence cannot be less than 0'],
             max: [1, 'Confidence cannot exceed 1'],
         },
+        classProbabilities: {
+            AD:   { type: Number, min: 0, max: 1 },
+            CN:   { type: Number, min: 0, max: 1 },
+            EMCI: { type: Number, min: 0, max: 1 },
+            LMCI: { type: Number, min: 0, max: 1 },
+        },
         modelVersion: {
             type: String,
             default: '1.0.0',
             trim: true,
+        },
+        processingTimeMs: {
+            type: Number,
+            min: 0,
         },
         details: {
             type: mongoose.Schema.Types.Mixed,
