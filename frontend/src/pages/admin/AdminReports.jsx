@@ -95,7 +95,9 @@ export default function AdminReports() {
                             <div className="flex items-center gap-4">
                                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl ${
                                     pred.prediction === 'AD' ? 'bg-rose-100 text-rose-600 shadow-rose-200/50' : 
-                                    pred.prediction === 'MCI' ? 'bg-amber-100 text-amber-600 shadow-amber-200/50' : 
+                                    pred.prediction === 'LMCI' ? 'bg-orange-100 text-orange-600 shadow-orange-200/50' : 
+                                    pred.prediction === 'EMCI' ? 'bg-amber-100 text-amber-600 shadow-amber-200/50' : 
+                                    pred.prediction === 'MCI' ? 'bg-yellow-100 text-yellow-600 shadow-yellow-200/50' : 
                                     'bg-emerald-100 text-emerald-600 shadow-emerald-200/50'
                                 } shadow-lg`}>
                                     {pred.prediction[0]}
@@ -105,7 +107,9 @@ export default function AdminReports() {
                                         Patient: {pred.user?.name || 'Unknown Patient'}
                                         <span className={`text-xs px-2 py-0.5 rounded-full ${
                                             pred.prediction === 'AD' ? 'bg-rose-100 text-rose-700' : 
-                                            pred.prediction === 'MCI' ? 'bg-amber-100 text-amber-700' : 
+                                            pred.prediction === 'LMCI' ? 'bg-orange-100 text-orange-700' : 
+                                            pred.prediction === 'EMCI' ? 'bg-amber-100 text-amber-700' : 
+                                            pred.prediction === 'MCI' ? 'bg-yellow-100 text-yellow-700' : 
                                             'bg-emerald-100 text-emerald-700'
                                         }`}>
                                             {pred.prediction}
@@ -178,7 +182,7 @@ export default function AdminReports() {
                                     <h3 className="font-bold text-gray-900 text-lg flex items-center gap-2">
                                         Test: Cognitive Assessment
                                         <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-bold">
-                                            MMSE: {test.mmseScore}/30
+                                            {test.totalScore != null ? `Symptoms: ${test.totalScore}/30` : `MMSE: ${test.mmseScore}/30`}
                                         </span>
                                     </h3>
                                     <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">

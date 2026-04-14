@@ -36,7 +36,7 @@ export default function Dashboard() {
         { label: "Tests Completed", value: String(report.summary.totalCognitiveTests), icon: CheckCircle, color: "green" },
         { label: "MRI Scans", value: String(report.summary.totalMRIScans), icon: Upload, color: "blue" },
         { label: "Predictions", value: String(report.summary.totalPredictions), icon: TrendingUp, color: "purple" },
-        { label: "Latest Score", value: report.summary.latestCognitiveScores ? `${report.summary.latestCognitiveScores.mmse}/30` : "N/A", icon: Clock, color: "orange" }
+        { label: "Latest Score", value: report.summary.latestCognitiveScores ? `${report.summary.latestCognitiveScores.total ?? report.summary.latestCognitiveScores.mmse}/30` : "N/A", icon: Clock, color: "orange" }
     ] : [
         { label: "Tests Completed", value: "0", icon: CheckCircle, color: "green" },
         { label: "MRI Scans", value: "0", icon: Upload, color: "blue" },
@@ -59,7 +59,7 @@ export default function Dashboard() {
                 date: new Date(test.submittedAt).toLocaleDateString(),
                 time: new Date(test.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 result: "Completed",
-                score: `MMSE: ${test.mmseScore}/30`,
+                score: test.totalScore != null ? `Symptoms: ${test.totalScore}/30` : `MMSE: ${test.mmseScore}/30`,
                 status: test.mmseScore >= 24 ? "success" : "warning"
             });
         });

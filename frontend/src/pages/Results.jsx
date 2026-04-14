@@ -43,7 +43,9 @@ export default function Results() {
     }, [immediateResult, navigate]);
 
     const latestTest = cognitiveTests[0] || null;
-    const mmseScore = latestTest?.mmseScore ?? (immediateResult?.score != null ? Math.round((immediateResult.score / immediateResult.total) * 30) : null);
+    // mmseScore is now inverted: 30 = no symptoms (healthy), 0 = all symptoms (worst)
+    // For old records: mmseScore may be from quiz, still 0-30 scale with higher = better
+    const mmseScore = latestTest?.mmseScore ?? null;
     const percentage = mmseScore != null ? Math.round((mmseScore / 30) * 100) : null;
 
     const precautionsMap = {
@@ -119,15 +121,15 @@ export default function Results() {
                     <div className="flex justify-center mb-4">
                         <div className="p-4 bg-indigo-100 rounded-full"><BarChart3 className="w-10 h-10 text-indigo-600" /></div>
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Latest Cognitive Test</h2>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Cognitive Assessment Submitted</h2>
                     <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.2 }}
                         className={`mx-auto mb-6 p-8 rounded-2xl ${riskColor === "green" ? "bg-green-50 border-2 border-green-200" : riskColor === "yellow" ? "bg-yellow-50 border-2 border-yellow-200" : riskColor === "red" ? "bg-red-50 border-2 border-red-200" : "bg-gray-50 border-2 border-gray-200"}`}>
                         <div className="flex flex-col items-center gap-4">
                             {riskIcon}
                             <h3 className={`text-2xl font-bold ${riskColor === "green" ? "text-green-700" : riskColor === "yellow" ? "text-yellow-700" : riskColor === "red" ? "text-red-700" : "text-gray-700"}`}>{riskLevel}</h3>
                             <div className="text-center">
-                                <p className="text-lg font-medium text-gray-700 mb-2">Score: <span className="font-bold text-indigo-600">{immediateResult.score}</span> / {immediateResult.total}</p>
-                                <p className="text-3xl font-bold text-gray-800">{Math.round((immediateResult.score / immediateResult.total) * 100)}%</p>
+                                <p className="text-lg font-medium text-gray-700 mb-2">Symptoms Reported: <span className="font-bold text-indigo-600">{immediateResult.symptomsReported ?? "—"}</span> / {immediateResult.totalAnswered ?? 30}</p>
+                                <p className="text-sm text-gray-500">Cognitive health score: <span className="font-bold text-gray-800">{percentage ?? "—"}%</span></p>
                             </div>
                         </div>
                     </motion.div>
@@ -149,14 +151,21 @@ export default function Results() {
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {cognitiveTests.map((test) => (
+                        {cognitiveTests.map((test) => {
+                            const score = test.mmseScore ?? 0;
+                            return (
                             <div key={test._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
                                 <div className="flex items-center gap-3 mb-2 sm:mb-0">
-                                    <div className={`p-2 rounded-lg ${test.mmseScore >= 24 ? "bg-green-100" : test.mmseScore >= 18 ? "bg-yellow-100" : "bg-red-100"}`}>
-                                        <Brain className={`w-5 h-5 ${test.mmseScore >= 24 ? "text-green-600" : test.mmseScore >= 18 ? "text-yellow-600" : "text-red-600"}`} />
+                                    <div className={`p-2 rounded-lg ${score >= 24 ? "bg-green-100" : score >= 18 ? "bg-yellow-100" : "bg-red-100"}`}>
+                                        <Brain className={`w-5 h-5 ${score >= 24 ? "text-green-600" : score >= 18 ? "text-yellow-600" : "text-red-600"}`} />
                                     </div>
                                     <div>
-                                        <p className="font-semibold text-gray-800">MMSE: {test.mmseScore}/30 · MoCA: {test.mocaScore}/30</p>
+                                        <p className="font-semibold text-gray-800">
+                                            {test.totalScore != null
+                                                ? `Symptoms: ${test.totalScore}/30 · Health: ${score}/30`
+                                                : `MMSE: ${score}/30 · MoCA: ${test.mocaScore}/30`
+                                            }
+                                        </p>
                                         <p className="text-sm text-gray-500">{new Date(test.submittedAt).toLocaleDateString()} at {new Date(test.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                     </div>
                                 </div>
@@ -166,7 +175,8 @@ export default function Results() {
                                     <span className="text-gray-600">Attention: <span className="font-semibold">{test.attentionScore}%</span></span>
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </motion.div>

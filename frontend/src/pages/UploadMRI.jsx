@@ -86,7 +86,8 @@ export default function UploadMRI() {
                 formData.append('mriFiles', file);
             });
 
-            await apiUpload('/upload/mri', formData);
+            const response = await apiUpload('/upload/mri', formData);
+            const savedFiles = response.data?.files || [];
 
             setUploaded(true);
             showToast(`${selectedFiles.length} MRI scan(s) uploaded successfully!`, 'success');
