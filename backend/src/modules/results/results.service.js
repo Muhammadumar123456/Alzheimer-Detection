@@ -24,6 +24,8 @@ exports.storePrediction = async (data) => {
         cognitiveTestId,
         prediction,
         confidence,
+        classProbabilities,
+        processingTimeMs,
         modelVersion,
         details,
     } = data;
@@ -34,6 +36,8 @@ exports.storePrediction = async (data) => {
         cognitiveTest: cognitiveTestId,
         prediction,
         confidence,
+        classProbabilities,
+        processingTimeMs,
         modelVersion,
         details,
     });
