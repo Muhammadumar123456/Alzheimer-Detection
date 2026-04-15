@@ -8,6 +8,7 @@
  */
 
 const CognitiveTest = require('./cognitive.model');
+const predictionService = require('../prediction/prediction.service');
 const AppError = require('../../utils/AppError');
 const logger = require('../../config/logger');
 const { paginateQuery } = require('../../utils/paginate');
@@ -69,7 +70,31 @@ exports.submitTest = async (userId, testData) => {
 
     logger.info(`Cognitive test submitted by user ${userId} (ID: ${cognitiveTest._id}), symptoms: ${totalScore}/30`);
 
-    return cognitiveTest;
+    // ------------------------------------------------------------------
+    // AUTO-PREDICTION
+    // If an MRI scan is linked, trigger the ML prediction immediately.
+    // ------------------------------------------------------------------
+    let predictionResult = null;
+    if (mriUploadId) {
+        try {
+            predictionResult = await predictionService.runPrediction({
+                mriScanId: mriUploadId,
+                cognitiveTestId: cognitiveTest._id,
+                userId,
+            });
+            logger.info(`Auto-prediction successful for test ${cognitiveTest._id}`);
+        } catch (err) {
+            // Log but don't fail the request — the cognitive test is already saved!
+            logger.error(`Auto-prediction failed for test ${cognitiveTest._id}: ${err.message}`, {
+                error: err.stack,
+            });
+        }
+    }
+
+    return {
+        cognitiveTest,
+        prediction: predictionResult,
+    };
 };
 
 /**
