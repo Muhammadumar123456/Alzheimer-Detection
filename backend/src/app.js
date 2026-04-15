@@ -137,6 +137,7 @@ const resultsRoutes = require('./modules/results/results.routes');
 const reportRoutes = require('./modules/report/report.routes');
 const adminRoutes = require('./modules/admin/admin.routes');
 const contactRoutes = require('./modules/contact/contact.routes');
+const predictionRoutes = require('./modules/prediction/prediction.routes');
 
 // Mount routes
 app.use(`${config.apiPrefix}/auth`, authRoutes);
@@ -147,6 +148,7 @@ app.use(`${config.apiPrefix}/results`, resultsRoutes);
 app.use(`${config.apiPrefix}/report`, reportRoutes);
 app.use(`${config.apiPrefix}/admin`, adminRoutes);
 app.use(`${config.apiPrefix}/contact`, contactRoutes);
+app.use(`${config.apiPrefix}/predict`, predictionRoutes);
 
 // =========================================================================
 // 404 HANDLER
