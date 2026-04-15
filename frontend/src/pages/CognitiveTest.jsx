@@ -136,7 +136,18 @@ export default function CognitiveTest() {
                 notes: `Clinical assessment: ${symptomsReported}/30 symptoms reported`,
             });
 
-            showToast("Cognitive assessment submitted successfully!", "success");
+            console.log("[CognitiveTest] Submission response:", response.data);
+
+            // Extract ML prediction if the auto-prediction ran
+            const predictionData = response.data.prediction || null;
+
+            showToast(
+                predictionData
+                    ? "Assessment submitted — AI analysis complete!"
+                    : "Cognitive assessment submitted successfully!",
+                "success"
+            );
+
             navigate("/results", {
                 state: {
                     testType: "cognitive",
@@ -144,6 +155,8 @@ export default function CognitiveTest() {
                     totalAnswered: TOTAL_QUESTIONS,
                     symptomsReported,
                     mriUploadId,
+                    // ML prediction payload (null if no MRI was linked)
+                    prediction: predictionData,
                 },
             });
         } catch (err) {
@@ -320,7 +333,7 @@ export default function CognitiveTest() {
                     }`}
                 >
                     {submitting ? (
-                        <><Loader2 className="w-6 h-6 animate-spin" /><span>Submitting Assessment...</span></>
+                        <><Loader2 className="w-6 h-6 animate-spin" /><span>{mriUploadId ? "Processing AI Analysis..." : "Submitting Assessment..."}</span></>
                     ) : (
                         <><Send className="w-5 h-5" /><span>Submit Assessment</span></>
                     )}
