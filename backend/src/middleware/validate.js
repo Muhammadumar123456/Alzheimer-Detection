@@ -105,6 +105,19 @@ const schemas = {
         },
     },
 
+    predict: {
+        mriScanId: {
+            required: true,
+            type: 'string',
+            label: 'MRI Scan ID',
+        },
+        cognitiveTestId: {
+            required: true,
+            type: 'string',
+            label: 'Cognitive Test ID',
+        },
+    },
+
     changePassword: {
         currentPassword: {
             required: true,
