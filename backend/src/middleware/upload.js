@@ -4,9 +4,10 @@
  * =============================================================================
  * Configures multer for MRI file uploads.
  * - Storage: uploads/mri/
- * - Allowed types: .nii, .nii.gz, .jpg, .png
+ * - Allowed types: .jpg, .jpeg, .png (strict image-only)
  * - Max file size: 50MB
  * - Auto-creates upload directory if missing
+ * - Post-upload magic-byte verification to reject renamed non-images
  * =============================================================================
  */
 
@@ -23,13 +24,21 @@ const logger = require('../config/logger');
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads', 'mri');
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
-const ALLOWED_EXTENSIONS = ['.nii', '.gz', '.jpg', '.png'];
-const ALLOWED_MIMETYPES = [
-    'image/jpeg',
-    'image/png',
-    'application/gzip',
-    'application/octet-stream', // .nii files don't have a standard MIME type
-];
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png'];
+const ALLOWED_MIMETYPES = ['image/jpeg', 'image/png'];
+
+/**
+ * Magic byte signatures for validating actual file content.
+ * These are the first bytes of a valid JPEG or PNG file.
+ */
+const MAGIC_BYTES = {
+    jpeg: [
+        Buffer.from([0xff, 0xd8, 0xff]),       // Standard JPEG/JFIF/EXIF
+    ],
+    png: [
+        Buffer.from([0x89, 0x50, 0x4e, 0x47]), // PNG signature
+    ],
+};
 
 // =========================================================================
 // AUTO-CREATE UPLOAD DIRECTORY
@@ -52,7 +61,7 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 const sanitizeFilename = (filename) => {
     return filename
         .replace(/\.\.\//g, '')          // Remove ../
-        .replace(/\.\.\\/g, '')          // Remove ..\
+        .replace(/\.\.\\/g, '')          // Remove ..\\
         .replace(/^[/\\]+/, '')          // Remove leading slashes
         .replace(/\0/g, '')             // Remove null bytes
         // eslint-disable-next-line no-control-regex
@@ -76,7 +85,7 @@ const storage = multer.diskStorage({
         const safeName = sanitizeFilename(file.originalname);
         const generatedName = `${userId}-${timestamp}-${safeName}`;
 
-        logger.info('File upload accepted', {
+        logger.info('File upload accepted (pre-validation)', {
             userId,
             originalName: file.originalname,
             mimeType: file.mimetype,
@@ -89,19 +98,14 @@ const storage = multer.diskStorage({
 });
 
 // =========================================================================
-// FILE FILTER
+// FILE FILTER — extension + MIME type validation
 // =========================================================================
 
 const fileFilter = (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    const originalName = file.originalname.toLowerCase();
 
-    // Check for .nii.gz (compound extension)
-    const isNiiGz = originalName.endsWith('.nii.gz');
-    const isAllowedExt =
-        isNiiGz || (ALLOWED_EXTENSIONS.includes(ext) && ext !== '.gz');
-
-    if (!isAllowedExt) {
+    // 1. Validate file extension
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
         logger.warn('File upload rejected: invalid extension', {
             userId: req.user ? req.user.id : 'unknown',
             originalName: file.originalname,
@@ -109,14 +113,14 @@ const fileFilter = (req, file, cb) => {
         });
         return cb(
             new AppError(
-                `File type not allowed. Accepted types: .nii, .nii.gz, .jpg, .png`,
+                'Invalid file type. Only MRI images (JPG, PNG) are allowed.',
                 400
             ),
             false
         );
     }
 
-    // Validate MIME type
+    // 2. Validate MIME type
     if (!ALLOWED_MIMETYPES.includes(file.mimetype)) {
         logger.warn('File upload rejected: invalid MIME type', {
             userId: req.user ? req.user.id : 'unknown',
@@ -125,7 +129,7 @@ const fileFilter = (req, file, cb) => {
         });
         return cb(
             new AppError(
-                `File MIME type '${file.mimetype}' is not allowed. Accepted types: ${ALLOWED_MIMETYPES.join(', ')}`,
+                'Invalid file type. Only MRI images (JPG, PNG) are allowed.',
                 400
             ),
             false
@@ -133,6 +137,98 @@ const fileFilter = (req, file, cb) => {
     }
 
     cb(null, true);
+};
+
+// =========================================================================
+// MAGIC BYTE VALIDATION
+// =========================================================================
+
+/**
+ * Check whether a file's first bytes match a known image signature.
+ * @param {string} filePath - Absolute path to the uploaded file
+ * @returns {Promise<boolean>} True if the file has valid JPEG or PNG magic bytes
+ */
+const validateMagicBytes = async (filePath) => {
+    const HEADER_SIZE = 8; // Enough for both JPEG (3) and PNG (4) signatures
+    const fd = await fs.promises.open(filePath, 'r');
+    try {
+        const buffer = Buffer.alloc(HEADER_SIZE);
+        await fd.read(buffer, 0, HEADER_SIZE, 0);
+
+        // Check JPEG signatures
+        for (const sig of MAGIC_BYTES.jpeg) {
+            if (buffer.subarray(0, sig.length).equals(sig)) return true;
+        }
+
+        // Check PNG signatures
+        for (const sig of MAGIC_BYTES.png) {
+            if (buffer.subarray(0, sig.length).equals(sig)) return true;
+        }
+
+        return false;
+    } finally {
+        await fd.close();
+    }
+};
+
+/**
+ * Post-upload middleware that reads the saved file's magic bytes to verify
+ * it is actually a JPEG or PNG image. Deletes the file if validation fails.
+ * This catches cases where a non-image file is renamed with a .jpg/.png extension.
+ */
+const validateUploadedFiles = async (req, res, next) => {
+    const files = req.files || (req.file ? [req.file] : []);
+
+    if (files.length === 0) return next();
+
+    for (const file of files) {
+        try {
+            const isValid = await validateMagicBytes(file.path);
+
+            if (!isValid) {
+                // Delete the invalid file from disk
+                try {
+                    await fs.promises.unlink(file.path);
+                } catch (unlinkErr) {
+                    logger.warn(`Failed to delete invalid upload: ${file.path}`, {
+                        error: unlinkErr.message,
+                    });
+                }
+
+                logger.warn('File upload rejected: invalid magic bytes (not a real image)', {
+                    userId: req.user ? req.user.id : 'unknown',
+                    originalName: file.originalname,
+                    savedAs: file.filename,
+                });
+
+                // Delete ALL files from this batch (atomic rejection)
+                for (const f of files) {
+                    if (f.path !== file.path) {
+                        try {
+                            await fs.promises.unlink(f.path);
+                        } catch (_) { /* already deleted or missing */ }
+                    }
+                }
+
+                return next(
+                    new AppError(
+                        `Invalid file type. "${file.originalname}" is not a valid image. Only MRI images (JPG, PNG) are allowed.`,
+                        400
+                    )
+                );
+            }
+        } catch (err) {
+            logger.error(`Magic byte validation error for ${file.path}`, {
+                error: err.message,
+            });
+            return next(
+                new AppError('File validation failed. Please try again.', 500)
+            );
+        }
+    }
+
+    logger.info(`Magic byte validation passed for ${files.length} file(s)`);
+    next();
 };
 
 // =========================================================================
@@ -148,10 +244,13 @@ const upload = multer({
 });
 
 /**
- * Middleware for MRI file upload.
+ * Middleware chain for MRI file upload:
+ *   1. Multer — extension + MIME validation, save to disk
+ *   2. validateUploadedFiles — magic byte verification
+ *
  * Accepts up to 4 files. Field name: 'mriFiles'
- * Backwards compatible — works with 1 to 4 files.
  */
-const uploadMRI = upload.array('mriFiles', 4);
+const uploadMRI = [upload.array('mriFiles', 4), validateUploadedFiles];
 
 module.exports = { uploadMRI, UPLOAD_DIR };
+

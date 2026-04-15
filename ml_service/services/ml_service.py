@@ -34,9 +34,9 @@ CLASSES = ["AD", "CN", "EMCI", "LMCI"]
 IMAGE_SIZE = (128, 128)
 COGNITIVE_DIM = 30
 
-# Model paths — relative to this file's parent (ml_service/)
-_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_MODELS_DIR = os.path.join(_BASE_DIR, "ml_service", "models")
+# Model paths — relative to this file's grandparent (FYP/ml_service/models)
+_SERVICE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_MODELS_DIR = os.path.join(_SERVICE_DIR, "models")
 
 ATTENTION_MODEL_PATH = os.path.join(_MODELS_DIR, "incv3_mobnet_attention_model.keras")
 FUSION_MODEL_PATH = os.path.join(_MODELS_DIR, "incv3_mobnet_cog30_fusion_model.h5")
