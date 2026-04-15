@@ -78,12 +78,12 @@ const config = {
     },
 
     // ---------------------------------------------------------------------------
-    // Future phases (uncomment as needed)
+    // ML MICROSERVICE
     // ---------------------------------------------------------------------------
-    // ml: {
-    //   url: process.env.ML_SERVICE_URL || 'http://localhost:8000',
-    //   timeout: parseInt(process.env.ML_SERVICE_TIMEOUT, 10) || 30000,
-    // },
+    ml: {
+        url: process.env.ML_SERVICE_URL || 'http://localhost:8000',
+        timeout: parseInt(process.env.ML_SERVICE_TIMEOUT, 10) || 30000,
+    },
 };
 
 // Deep-freeze to prevent runtime mutations (including nested objects)
