@@ -32,26 +32,43 @@ export default function Dashboard() {
 
     const userName = user?.name || user?.email?.split('@')[0] || "User";
 
+    // Prediction class labels for display
+    const predictionLabels = { AD: "Alzheimer's", CN: "Normal", EMCI: "Early MCI", LMCI: "Late MCI" };
+
+    const latestPred = report?.summary?.latestPrediction;
     const stats = report ? [
         { label: "Tests Completed", value: String(report.summary.totalCognitiveTests), icon: CheckCircle, color: "green" },
         { label: "MRI Scans", value: String(report.summary.totalMRIScans), icon: Upload, color: "blue" },
-        { label: "Predictions", value: String(report.summary.totalPredictions), icon: TrendingUp, color: "purple" },
-        { label: "Latest Score", value: report.summary.latestCognitiveScores ? `${report.summary.latestCognitiveScores.total ?? report.summary.latestCognitiveScores.mmse}/30` : "N/A", icon: Clock, color: "orange" }
+        { label: "AI Predictions", value: String(report.summary.totalPredictions), icon: TrendingUp, color: "purple" },
+        { label: "Latest Diagnosis", value: latestPred ? predictionLabels[latestPred.prediction] || latestPred.prediction : "N/A", icon: Clock, color: "orange" }
     ] : [
         { label: "Tests Completed", value: "0", icon: CheckCircle, color: "green" },
         { label: "MRI Scans", value: "0", icon: Upload, color: "blue" },
-        { label: "Predictions", value: "0", icon: TrendingUp, color: "purple" },
-        { label: "Latest Score", value: "N/A", icon: Clock, color: "orange" }
+        { label: "AI Predictions", value: "0", icon: TrendingUp, color: "purple" },
+        { label: "Latest Diagnosis", value: "N/A", icon: Clock, color: "orange" }
     ];
 
     const quickActions = [
         { title: "Upload MRI Scan", description: "Upload brain MRI images for AI analysis", icon: Upload, gradient: "from-blue-500 to-blue-600", path: "/upload-mri" },
         { title: "Cognitive Test", description: "Take comprehensive cognitive assessment", icon: Brain, gradient: "from-purple-500 to-purple-600", path: "/cognitive-test" },
-        { title: "View Results", description: "Check your test results and reports", icon: BarChart3, gradient: "from-indigo-500 to-indigo-600", path: "/results" }
+        { title: "View Results", description: "Check your AI diagnostic results", icon: BarChart3, gradient: "from-indigo-500 to-indigo-600", path: "/results" }
     ];
 
     const recentActivity = [];
     if (report) {
+        // Add AI predictions to activity feed
+        report.predictions?.slice(0, 3).forEach((pred) => {
+            const pct = Math.round((pred.confidence ?? 0) * 100);
+            recentActivity.push({
+                id: pred._id,
+                type: "AI Prediction",
+                date: new Date(pred.createdAt).toLocaleDateString(),
+                time: new Date(pred.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                result: predictionLabels[pred.prediction] || pred.prediction,
+                score: `${pct}% confidence`,
+                status: pred.prediction === "CN" ? "success" : "warning"
+            });
+        });
         report.cognitiveTests?.slice(0, 3).forEach((test) => {
             recentActivity.push({
                 id: test._id,
@@ -163,7 +180,9 @@ export default function Dashboard() {
                             <motion.div key={activity.id} whileHover={{ x: 5 }} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                                 <div className="flex items-start sm:items-center gap-4 mb-3 sm:mb-0">
                                     <div className={`p-2 rounded-lg ${activity.status === "success" ? "bg-green-100" : "bg-yellow-100"}`}>
-                                        {activity.type === "Cognitive Test" ? (
+                                        {activity.type === "AI Prediction" ? (
+                                            <TrendingUp className={`w-5 h-5 ${activity.status === "success" ? "text-green-600" : "text-yellow-600"}`} />
+                                        ) : activity.type === "Cognitive Test" ? (
                                             <Brain className={`w-5 h-5 ${activity.status === "success" ? "text-green-600" : "text-yellow-600"}`} />
                                         ) : (
                                             <Upload className={`w-5 h-5 ${activity.status === "success" ? "text-green-600" : "text-yellow-600"}`} />
