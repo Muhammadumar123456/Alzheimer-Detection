@@ -88,8 +88,8 @@ app.use(config.apiPrefix, apiLimiter);
 
 app.use(passport.initialize());
 
-const googleClientId = process.env.GOOGLE_CLIENT_ID;
-const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const googleClientId = config.google.clientId;
+const googleClientSecret = config.google.clientSecret;
 
 if (googleClientId && googleClientSecret && googleClientId !== 'YOUR_GOOGLE_CLIENT_ID') {
     passport.use(
@@ -97,7 +97,7 @@ if (googleClientId && googleClientSecret && googleClientId !== 'YOUR_GOOGLE_CLIE
             {
                 clientID: googleClientId,
                 clientSecret: googleClientSecret,
-                callbackURL: `${process.env.API_BASE_URL || `http://localhost:${config.port}`}${config.apiPrefix}/auth/google/callback`,
+                callbackURL: `${config.google.apiBaseUrl || `http://localhost:${config.port}`}${config.apiPrefix}/auth/google/callback`,
             },
             (accessToken, refreshToken, profile, done) => {
                 // Pass the profile to the route handler
@@ -107,7 +107,15 @@ if (googleClientId && googleClientSecret && googleClientId !== 'YOUR_GOOGLE_CLIE
     );
     logger.info('Google OAuth strategy configured');
 } else {
-    logger.warn('Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env');
+    // Register a dummy strategy to prevent "Unknown authentication strategy" error
+    // but return a custom error if used.
+    passport.use('google', new GoogleStrategy({
+        clientID: 'placeholder',
+        clientSecret: 'placeholder',
+        callbackURL: 'placeholder'
+    }, () => {}));
+    
+    logger.warn('Google OAuth not fully configured. Users will see config error at runtime.');
 }
 
 passport.serializeUser((user, done) => done(null, user));

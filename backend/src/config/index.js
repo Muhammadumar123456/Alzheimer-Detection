@@ -77,12 +77,15 @@ const config = {
         maxFileSize: parseInt(process.env.MAX_FILE_SIZE, 10) || 50 * 1024 * 1024, // 50MB
     },
 
-    // ---------------------------------------------------------------------------
-    // ML MICROSERVICE
-    // ---------------------------------------------------------------------------
     ml: {
         url: process.env.ML_SERVICE_URL || 'http://localhost:8000',
         timeout: parseInt(process.env.ML_SERVICE_TIMEOUT, 10) || 30000,
+    },
+    // --- Google OAuth ---
+    google: {
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        apiBaseUrl: process.env.API_BASE_URL,
     },
 };
 
