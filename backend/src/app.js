@@ -117,11 +117,35 @@ passport.deserializeUser((obj, done) => done(null, obj));
 // HEALTH CHECK
 // =========================================================================
 
-app.get(`${config.apiPrefix}/health`, (req, res) => {
-    sendSuccess(res, 200, 'API is healthy', {
+app.get(`${config.apiPrefix}/health`, async (req, res) => {
+    const mongoose = require('mongoose');
+    const axios = require('axios');
+
+    // Database status
+    const dbState = mongoose.connection.readyState;
+    const dbStatus = dbState === 1 ? 'connected' : dbState === 2 ? 'connecting' : 'disconnected';
+
+    // ML service status
+    let mlStatus = { status: 'unknown', modelsLoaded: false };
+    try {
+        const mlRes = await axios.get(`${config.ml.url}/health`, { timeout: 5000 });
+        mlStatus = {
+            status: mlRes.data?.status || 'healthy',
+            modelsLoaded: mlRes.data?.models_loaded || false,
+        };
+    } catch {
+        mlStatus = { status: 'unavailable', modelsLoaded: false };
+    }
+
+    const isHealthy = dbStatus === 'connected';
+    const statusCode = isHealthy ? 200 : 503;
+
+    sendSuccess(res, statusCode, isHealthy ? 'API is healthy' : 'API is degraded', {
         environment: config.env,
         uptime: process.uptime(),
         timestamp: new Date().toISOString(),
+        database: dbStatus,
+        mlService: mlStatus,
     });
 });
 

@@ -105,11 +105,13 @@ export default function Results() {
                 apiGet("/upload/my?limit=10&sort=-uploadedAt"),
             ]);
 
-            console.log("[Results] API data loaded:", {
-                results: resultsRes.data?.results?.length ?? 0,
-                cognitive: cogRes.data?.tests?.length ?? 0,
-                mri: mriRes.data?.files?.length ?? 0,
-            });
+            if (import.meta.env.DEV) {
+                console.log("[Results] API data loaded:", {
+                    results: resultsRes.data?.results?.length ?? 0,
+                    cognitive: cogRes.data?.tests?.length ?? 0,
+                    mri: mriRes.data?.files?.length ?? 0,
+                });
+            }
 
             setMlResults(resultsRes.data?.results || []);
             setCognitiveTests(cogRes.data?.tests || []);
@@ -122,7 +124,9 @@ export default function Results() {
                 return;
             }
         } catch (err) {
-            console.error("[Results] Failed to fetch data:", err);
+            if (import.meta.env.DEV) {
+                console.error("[Results] Failed to fetch data:", err);
+            }
             setError(err.message || "Failed to load results");
         } finally {
             setLoading(false);

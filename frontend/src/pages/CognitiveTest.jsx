@@ -136,7 +136,9 @@ export default function CognitiveTest() {
                 notes: `Clinical assessment: ${symptomsReported}/30 symptoms reported`,
             });
 
-            console.log("[CognitiveTest] Submission response:", response.data);
+            if (import.meta.env.DEV) {
+                console.log("[CognitiveTest] Submission response:", response.data);
+            }
 
             // Extract ML prediction if the auto-prediction ran
             const predictionData = response.data.prediction || null;

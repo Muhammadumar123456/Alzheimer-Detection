@@ -10,7 +10,7 @@ export default function ResetPassword() {
     const { token } = useParams();
     const navigate = useNavigate();
     const { showToast } = useToast();
-    const { login } = useAuth();
+    const { loginWithToken } = useAuth();
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -32,7 +32,7 @@ export default function ResetPassword() {
             
             // Automatically log in the user after reset
             setTimeout(() => {
-                login(response.data.user, response.data.token);
+                loginWithToken(response.data.user, response.data.token);
                 navigate('/dashboard');
             }, 2000);
         } catch (err) {
