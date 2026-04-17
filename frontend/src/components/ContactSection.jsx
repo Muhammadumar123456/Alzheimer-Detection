@@ -21,7 +21,10 @@ export default function ContactSection() {
         try {
             await apiPost('/contact', formData);
             setSubmitted(true);
+            setFormData({ name: '', email: '', subject: '', message: '' }); // Reset form
             showToast('Message sent successfully!', 'success');
+            // Auto-reset submitted state after 5 seconds to show form again (or just keep it true but show form)
+            setTimeout(() => setSubmitted(false), 5000);
         } catch (err) {
             showToast(err.message || 'Failed to send message', 'error');
         } finally {
@@ -33,27 +36,7 @@ export default function ContactSection() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    if (submitted) {
-        return (
-            <motion.section id="contact" className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] p-16 max-w-2xl mx-auto">
-                    <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
-                        <CheckCircle2 size={40} />
-                    </div>
-                    <h2 className="text-4xl font-black text-slate-900 mb-4">Message Received!</h2>
-                    <p className="text-slate-500 text-lg leading-relaxed mb-10">
-                        Thank you for reaching out. Our team will review your inquiry and get back to you within 24-48 business hours.
-                    </p>
-                    <button 
-                        onClick={() => setSubmitted(false)}
-                        className="px-10 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-                    >
-                        Send Another Message
-                    </button>
-                </div>
-            </motion.section>
-        );
-    }
+
 
     return (
         <section id="contact" className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -130,6 +113,17 @@ export default function ContactSection() {
                                 className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none text-sm font-medium resize-none" />
                         </div>
                         
+                        {submitted && (
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 text-emerald-700 text-sm font-medium mb-6"
+                            >
+                                <CheckCircle2 size={18} />
+                                Your message has been sent successfully!
+                            </motion.div>
+                        )}
+
                         <button 
                             type="submit" 
                             disabled={loading}
