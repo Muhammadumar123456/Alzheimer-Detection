@@ -38,7 +38,7 @@ export default function ForgotPassword() {
                         <Brain className="w-8 h-8 text-white" />
                     </div>
                     <h1 className="text-3xl font-bold text-gray-900">Forgot Password</h1>
-                    <p className="text-gray-500 mt-2">Enter your email to receive recovery instructions.</p>
+                    <p className="text-gray-500 mt-2">Enter your email to receive a 6-digit verification code.</p>
                 </div>
 
                 {!submitted ? (
@@ -63,7 +63,7 @@ export default function ForgotPassword() {
                             disabled={loading}
                             className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
                         >
-                            {loading ? <Loader2 className="animate-spin" /> : 'Send Recovery Link'}
+                            {loading ? <Loader2 className="animate-spin" /> : 'Send Recovery Code'}
                         </button>
                     </form>
                 ) : (
@@ -78,11 +78,17 @@ export default function ForgotPassword() {
                         <h3 className="text-xl font-bold text-gray-900 mb-2">Check Your Email</h3>
                         <p className="text-gray-500 mb-8">
                             If an account exists for <span className="font-semibold text-gray-900">{email}</span>, 
-                            you'll receive a password reset link shortly.
+                            you'll receive a 6-digit verification code shortly.
                         </p>
                         <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl text-xs text-amber-800 mb-8">
-                            <strong>Note:</strong> Check your spam folder if you don't see it. Since we're in dev mode, check the server console for the link.
+                            <strong>Note:</strong> Check your spam folder if you don't see it. Since we're in dev mode, check the server console for the 6-digit code.
                         </div>
+                        <Link 
+                            to={`/reset-password?email=${encodeURIComponent(email)}`}
+                            className="block w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                        >
+                            Enter Verification Code
+                        </Link>
                     </motion.div>
                 )}
 

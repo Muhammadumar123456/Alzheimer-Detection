@@ -141,12 +141,11 @@ exports.changePassword = async (userId, currentPassword, newPassword) => {
 };
 
 /**
- * Forgot password — generate reset token and send email
+ * Forgot password — generate 6-digit OTP and send email
  * @param {string} email - User email
  * @returns {Promise<void>}
  */
 exports.forgotPassword = async (email) => {
-    const crypto = require('crypto');
     const { sendPasswordResetEmail } = require('../../utils/emailService');
 
     const user = await User.findOne({ email });
@@ -155,29 +154,21 @@ exports.forgotPassword = async (email) => {
         return;
     }
 
-    // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto
-        .createHash('sha256')
-        .update(resetToken)
-        .digest('hex');
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Save hashed token and expiry to user
-    user.passwordResetToken = hashedToken;
-    user.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    // Save OTP and expiry (10 minutes)
+    user.passwordResetOTP = otp;
+    user.passwordResetOTPExpires = Date.now() + 10 * 60 * 1000;
     await user.save({ validateBeforeSave: false });
 
-    // Build reset URL (frontend URL)
-    const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
-    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
-
     try {
-        await sendPasswordResetEmail(email, resetUrl);
-        logger.info(`Password reset email sent to ${email}`);
+        await sendPasswordResetEmail(email, otp);
+        logger.info(`Password reset OTP sent to ${email}`);
     } catch (err) {
-        // If email fails, clear the token
-        user.passwordResetToken = undefined;
-        user.passwordResetExpires = undefined;
+        // If email fails, clear the OTP
+        user.passwordResetOTP = undefined;
+        user.passwordResetOTPExpires = undefined;
         await user.save({ validateBeforeSave: false });
         logger.error(`Failed to send reset email: ${err.message}`);
         throw new AppError('Failed to send reset email. Please try again later.', 500);
@@ -185,45 +176,39 @@ exports.forgotPassword = async (email) => {
 };
 
 /**
- * Reset password using token
- * @param {string} token - Raw reset token from URL
+ * Reset password using OTP
+ * @param {string} email - User email
+ * @param {string} otp - 6-digit OTP from email
  * @param {string} newPassword - New password
  * @returns {Promise<object>} - { user, token }
  */
-exports.resetPassword = async (token, newPassword) => {
-    const crypto = require('crypto');
-
-    // 1. Hash the token to compare with stored hash
-    const hashedToken = crypto
-        .createHash('sha256')
-        .update(token)
-        .digest('hex');
-
-    // 2. Find user with valid token
+exports.resetPassword = async (email, otp, newPassword) => {
+    // 1. Find user with valid OTP and email
     const user = await User.findOne({
-        passwordResetToken: hashedToken,
-        passwordResetExpires: { $gt: Date.now() },
-    }).select('+passwordHash +passwordResetToken +passwordResetExpires');
+        email,
+        passwordResetOTP: otp,
+        passwordResetOTPExpires: { $gt: Date.now() },
+    }).select('+passwordHash +passwordResetOTP +passwordResetOTPExpires');
 
     if (!user) {
-        throw new AppError('Invalid or expired reset token. Please request a new one.', 400);
+        throw new AppError('Invalid or expired OTP. Please request a new one.', 400);
     }
 
-    // 3. Update password and clear token
+    // 2. Update password and clear OTP
     user.passwordHash = newPassword;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
+    user.passwordResetOTP = undefined;
+    user.passwordResetOTPExpires = undefined;
     await user.save();
 
-    // 4. Generate new JWT
+    // 3. Generate new JWT
     const jwtToken = signToken(user._id, user.role);
 
     logger.info(`Password reset successful for user ${user.email}`);
 
     const userResponse = user.toObject();
     delete userResponse.passwordHash;
-    delete userResponse.passwordResetToken;
-    delete userResponse.passwordResetExpires;
+    delete userResponse.passwordResetOTP;
+    delete userResponse.passwordResetOTPExpires;
 
     return { user: userResponse, token: jwtToken };
 };

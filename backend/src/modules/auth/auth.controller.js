@@ -77,9 +77,9 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
  * POST /api/auth/reset-password
  */
 exports.resetPassword = asyncHandler(async (req, res) => {
-    const { token, newPassword } = req.body;
+    const { email, otp, newPassword } = req.body;
 
-    const { user, token: jwtToken } = await authService.resetPassword(token, newPassword);
+    const { user, token: jwtToken } = await authService.resetPassword(email, otp, newPassword);
 
     sendSuccess(res, 200, 'Password reset successfully', {
         user,

@@ -65,12 +65,12 @@ exports.sendEmail = async ({ to, subject, text, html }) => {
 };
 
 /**
- * Send password reset email
+ * Send password reset email with OTP
  * @param {string} email - Recipient email
- * @param {string} resetUrl - Full reset URL with token
+ * @param {string} otp - 6-digit OTP code
  */
-exports.sendPasswordResetEmail = async (email, resetUrl) => {
-    const subject = 'Password Reset — AlzDetect';
+exports.sendPasswordResetEmail = async (email, otp) => {
+    const subject = 'Your Password Reset Code — AlzDetect';
     const html = `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
             <div style="text-align: center; margin-bottom: 30px;">
@@ -78,27 +78,23 @@ exports.sendPasswordResetEmail = async (email, resetUrl) => {
                 <p style="color: #6b7280; margin-top: 5px;">Early Alzheimer Disease Detection System</p>
             </div>
             <div style="background: #f9fafb; border-radius: 12px; padding: 30px; border: 1px solid #e5e7eb;">
-                <h2 style="color: #1f2937; margin-top: 0;">Password Reset Request</h2>
-                <p style="color: #4b5563; line-height: 1.6;">
-                    You requested a password reset. Click the button below to set a new password.
-                    This link will expire in <strong>10 minutes</strong>.
+                <h2 style="color: #1f2937; margin-top: 0; text-align: center;">Verification Code</h2>
+                <p style="color: #4b5563; line-height: 1.6; text-align: center;">
+                    You requested a password reset. Use the 6-digit code below to set a new password.
+                    This code will expire in <strong>10 minutes</strong>.
                 </p>
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="${resetUrl}" style="background: #4f46e5; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">
-                        Reset Password
-                    </a>
+                <div style="text-align: center; margin: 40px 0;">
+                    <div style="background: #ffffff; color: #4f46e5; border: 2px dashed #4f46e5; font-size: 36px; font-weight: 800; letter-spacing: 12px; padding: 20px; display: inline-block; border-radius: 12px;">
+                        ${otp}
+                    </div>
                 </div>
-                <p style="color: #6b7280; font-size: 14px;">
+                <p style="color: #6b7280; font-size: 14px; text-align: center;">
                     If you didn't request this, please ignore this email. Your password will remain unchanged.
-                </p>
-                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-                <p style="color: #9ca3af; font-size: 12px;">
-                    If the button doesn't work, copy and paste this URL: ${resetUrl}
                 </p>
             </div>
         </div>
     `;
-    const text = `Password Reset\n\nYou requested a password reset. Visit this link to set a new password (expires in 10 minutes):\n${resetUrl}\n\nIf you didn't request this, ignore this email.`;
+    const text = `Password Reset Code: ${otp}\n\nYou requested a password reset. Use this code to set a new password (expires in 10 minutes): ${otp}\n\nIf you didn't request this, ignore this email.`;
 
     await exports.sendEmail({ to: email, subject, text, html });
 };
