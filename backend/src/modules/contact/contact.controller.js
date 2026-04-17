@@ -19,9 +19,14 @@ const logger = require('../../config/logger');
 exports.submitContact = asyncHandler(async (req, res) => {
     const { name, email, subject, message } = req.body;
 
-    await sendContactEmail({ name, email, subject, message });
+    logger.info(`Processing contact form submission from: ${email}`);
+    const emailResult = await sendContactEmail({ name, email, subject, message });
 
-    logger.info(`Contact form submitted by ${email}: ${subject}`);
+    logger.info(`Contact form submitted successfully`, {
+        from: email,
+        subject,
+        messageId: emailResult?.messageId
+    });
 
     sendSuccess(res, 200, 'Your message has been sent successfully. We will get back to you soon.');
 });
