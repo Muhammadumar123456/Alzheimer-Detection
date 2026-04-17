@@ -14,7 +14,7 @@ const { paginateQuery } = require('../../utils/paginate');
 
 /**
  * Store a new ML prediction result
- * @param {object} data - { userId, mriScanId, cognitiveTestId, prediction, confidence, modelVersion, details }
+ * @param {object} data - { userId, mriScanId, cognitiveTestId, prediction, confidence, status, modelVersion, details }
  * @returns {Promise<object>} Created result document
  */
 exports.storePrediction = async (data) => {
@@ -27,6 +27,7 @@ exports.storePrediction = async (data) => {
         classProbabilities,
         processingTimeMs,
         modelVersion,
+        status,
         details,
     } = data;
 
@@ -39,18 +40,20 @@ exports.storePrediction = async (data) => {
         classProbabilities,
         processingTimeMs,
         modelVersion,
+        status: status || 'completed',
         details,
     });
 
     logger.info(
-        `Prediction stored: ${prediction} (confidence: ${confidence}) for user ${userId}`
+        `Prediction stored: ${prediction} (confidence: ${confidence}, status: ${result.status}) for user ${userId}`
     );
 
     return result;
 };
 
 /**
- * Get prediction results for a specific user with pagination
+ * Get prediction results for a specific user with pagination.
+ * Only returns completed predictions by default (hides pending/failed).
  * @param {string} userId - Mongoose User ID
  * @param {object} paginationParams - { page, limit, skip, sort }
  * @returns {Promise<{ docs: Array, pagination: object }>} Paginated results
@@ -58,7 +61,7 @@ exports.storePrediction = async (data) => {
 exports.getResultsByUser = async (userId, paginationParams) => {
     const result = await paginateQuery(
         Result,
-        { user: userId },
+        { user: userId, status: { $ne: 'failed' } },
         paginationParams,
         {
             populate: [

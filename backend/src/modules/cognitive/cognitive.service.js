@@ -73,21 +73,37 @@ exports.submitTest = async (userId, testData) => {
     // ------------------------------------------------------------------
     // AUTO-PREDICTION
     // If an MRI scan is linked, trigger the ML prediction immediately.
+    // Includes duplicate prevention — skip if a result already exists
+    // for this exact MRI + cognitive test pair.
     // ------------------------------------------------------------------
     let predictionResult = null;
     if (mriUploadId) {
-        try {
-            predictionResult = await predictionService.runPrediction({
-                mriScanId: mriUploadId,
-                cognitiveTestId: cognitiveTest._id,
-                userId,
-            });
-            logger.info(`Auto-prediction successful for test ${cognitiveTest._id}`);
-        } catch (err) {
-            // Log but don't fail the request — the cognitive test is already saved!
-            logger.error(`Auto-prediction failed for test ${cognitiveTest._id}: ${err.message}`, {
-                error: err.stack,
-            });
+        const Result = require('../results/results.model');
+
+        // Duplicate guard: check if a prediction already exists for this pair
+        const existingResult = await Result.findOne({
+            mriScan: mriUploadId,
+            cognitiveTest: cognitiveTest._id,
+            status: { $in: ['completed', 'pending'] },
+        });
+
+        if (existingResult) {
+            logger.info(`Skipping auto-prediction — result already exists (${existingResult._id}, status: ${existingResult.status})`);
+            predictionResult = existingResult;
+        } else {
+            try {
+                predictionResult = await predictionService.runPrediction({
+                    mriScanId: mriUploadId,
+                    cognitiveTestId: cognitiveTest._id,
+                    userId,
+                });
+                logger.info(`Auto-prediction successful for test ${cognitiveTest._id}`);
+            } catch (err) {
+                // Log but don't fail the request — the cognitive test is already saved!
+                logger.error(`Auto-prediction failed for test ${cognitiveTest._id}: ${err.message}`, {
+                    error: err.stack,
+                });
+            }
         }
     }
 

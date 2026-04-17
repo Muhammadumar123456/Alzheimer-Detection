@@ -52,6 +52,24 @@ const resultsSchema = new mongoose.Schema(
             default: '1.0.0',
             trim: true,
         },
+        status: {
+            type: String,
+            enum: {
+                values: ['pending', 'completed', 'failed'],
+                message: '{VALUE} is not a valid prediction status.',
+            },
+            default: 'completed',
+            index: true,
+        },
+        retryCount: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
+        errorMessage: {
+            type: String,
+            trim: true,
+        },
         processingTimeMs: {
             type: Number,
             min: 0,

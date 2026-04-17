@@ -27,6 +27,12 @@ const AppError = require('../../utils/AppError');
 const logger = require('../../config/logger');
 
 // =========================================================================
+// RETRY CONFIGURATION
+// =========================================================================
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000; // 1 second, doubles each retry
+
+// =========================================================================
 // ML SERVICE HEALTH CHECK
 // =========================================================================
 
@@ -129,19 +135,6 @@ exports.runPrediction = async ({ mriScanId, cognitiveTestId, userId }) => {
     // ------------------------------------------------------------------
     // 3. Build multipart/form-data and call ML service
     // ------------------------------------------------------------------
-    const formData = new FormData();
-
-    // Attach MRI image as file stream
-    const fileStream = fs.createReadStream(mriFilePath);
-    const fileName = mriRecord.fileName || path.basename(mriFilePath);
-    formData.append('mri_file', fileStream, {
-        filename: fileName,
-        contentType: 'image/jpeg', // ML service handles grayscale conversion
-    });
-
-    // Attach cognitive answers as JSON string
-    formData.append('cognitive_answers', JSON.stringify(cognitiveTest.rawAnswers));
-
     logger.info(`Sending prediction request to ML service`, {
         userId,
         mriScanId,
@@ -150,48 +143,80 @@ exports.runPrediction = async ({ mriScanId, cognitiveTestId, userId }) => {
     });
 
     let mlResponse;
-    try {
-        mlResponse = await axios.post(`${config.ml.url}/predict`, formData, {
-            headers: {
-                ...formData.getHeaders(),
-            },
-            timeout: config.ml.timeout,
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-        });
-    } catch (err) {
-        // Categorize the error for clean API responses
+    let lastError;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            // Build fresh FormData and file stream for each attempt
+            const formData = new FormData();
+            const fileStream = fs.createReadStream(mriFilePath);
+            const fileName = mriRecord.fileName || path.basename(mriFilePath);
+            formData.append('mri_file', fileStream, {
+                filename: fileName,
+                contentType: 'image/jpeg',
+            });
+            formData.append('cognitive_answers', JSON.stringify(cognitiveTest.rawAnswers));
+
+            mlResponse = await axios.post(`${config.ml.url}/predict`, formData, {
+                headers: {
+                    ...formData.getHeaders(),
+                },
+                timeout: config.ml.timeout,
+                maxContentLength: Infinity,
+                maxBodyLength: Infinity,
+            });
+
+            // Success — break out of retry loop
+            if (attempt > 1) {
+                logger.info(`ML prediction succeeded on attempt ${attempt}`);
+            }
+            break;
+        } catch (err) {
+            lastError = err;
+
+            // Non-retryable errors: client-side issues (4xx from ML service)
+            if (err.response && err.response.status >= 400 && err.response.status < 500) {
+                const detail = err.response.data?.detail || err.response.statusText;
+                logger.error('ML service rejected the request (non-retryable)', {
+                    status: err.response.status,
+                    detail,
+                });
+                throw new AppError(`ML service error: ${detail}`, err.response.status);
+            }
+
+            // Retryable errors: connection issues, timeouts, 5xx
+            logger.warn(`ML prediction attempt ${attempt}/${MAX_RETRIES} failed`, {
+                error: err.message,
+                code: err.code,
+            });
+
+            if (attempt < MAX_RETRIES) {
+                const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+                logger.info(`Retrying ML prediction in ${delay}ms...`);
+                await new Promise((resolve) => setTimeout(resolve, delay));
+            }
+        }
+    }
+
+    // All retries exhausted
+    if (!mlResponse) {
+        const err = lastError;
         if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
-            logger.error('ML service is unreachable', { error: err.message });
             throw new AppError(
                 'ML service is currently unavailable. Please try again later.',
                 503
             );
         }
-
         if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') {
-            logger.error('ML service request timed out', { error: err.message });
-            throw new AppError(
-                'ML service timed out. Please try again.',
-                504
-            );
+            throw new AppError('ML service timed out. Please try again.', 504);
         }
-
-        // ML service returned an error response (4xx/5xx)
         if (err.response) {
             const detail = err.response.data?.detail || err.response.statusText;
-            logger.error('ML service returned an error', {
-                status: err.response.status,
-                detail,
-            });
             throw new AppError(
                 `ML service error: ${detail}`,
                 err.response.status >= 500 ? 502 : err.response.status
             );
         }
-
-        // Unknown error
-        logger.error('Unexpected ML service error', { error: err.message });
         throw new AppError('ML service returned an invalid response.', 502);
     }
 
@@ -228,6 +253,7 @@ exports.runPrediction = async ({ mriScanId, cognitiveTestId, userId }) => {
         classProbabilities: mlData.class_probabilities,
         processingTimeMs: mlData.processing_time_ms,
         modelVersion: '1.0.0',
+        status: 'completed',
         details: {
             mlServiceUrl: config.ml.url,
             rawProbabilities: mlData.class_probabilities,
