@@ -20,11 +20,17 @@ const createTransporter = () => {
     const pass = process.env.SMTP_PASS;
 
     if (host && user && pass) {
+        const port = parseInt(process.env.SMTP_PORT, 10) || 587;
+        const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+
         return nodemailer.createTransport({
             host,
-            port: parseInt(process.env.SMTP_PORT, 10) || 587,
-            secure: process.env.SMTP_SECURE === 'true',
+            port,
+            secure,
             auth: { user, pass },
+            // Add extra timeout for stability
+            connectionTimeout: 10000,
+            greetingTimeout: 5000,
         });
     }
 
