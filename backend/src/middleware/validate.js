@@ -132,6 +132,60 @@ const schemas = {
             label: 'New Password',
         },
     },
+
+    contact: {
+        name: {
+            required: true,
+            type: 'string',
+            minLength: 2,
+            maxLength: 100,
+            label: 'Name',
+        },
+        email: {
+            required: true,
+            type: 'string',
+            match: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+            label: 'Email',
+        },
+        subject: {
+            required: true,
+            type: 'string',
+            minLength: 3,
+            maxLength: 200,
+            label: 'Subject',
+        },
+        message: {
+            required: true,
+            type: 'string',
+            minLength: 10,
+            maxLength: 2000,
+            label: 'Message',
+        },
+    },
+
+    forgotPassword: {
+        email: {
+            required: true,
+            type: 'string',
+            match: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+            label: 'Email',
+        },
+    },
+
+    resetPassword: {
+        token: {
+            required: true,
+            type: 'string',
+            label: 'Reset Token',
+        },
+        newPassword: {
+            required: true,
+            type: 'string',
+            minLength: 8,
+            passwordMatch: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?~`])/,
+            label: 'New Password',
+        },
+    },
 };
 
 // =========================================================================

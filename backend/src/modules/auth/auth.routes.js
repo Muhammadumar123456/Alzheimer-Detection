@@ -26,8 +26,8 @@ const router = express.Router();
  */
 router.post('/register', authLimiter, validate(schemas.register), authController.register);
 router.post('/login', authLimiter, validate(schemas.login), authController.login);
-router.post('/forgot-password', authLimiter, authController.forgotPassword);
-router.post('/reset-password', authLimiter, authController.resetPassword);
+router.post('/forgot-password', authLimiter, validate(schemas.forgotPassword), authController.forgotPassword);
+router.post('/reset-password', authLimiter, validate(schemas.resetPassword), authController.resetPassword);
 
 /**
  * Protected Routes (JWT required)

@@ -3,13 +3,13 @@
  * CONTACT CONTROLLER
  * =============================================================================
  * Handles contact form submissions.
+ * Input validation is handled by the validate middleware in contact.routes.js.
  * =============================================================================
  */
 
 const asyncHandler = require('../../utils/asyncHandler');
 const { sendSuccess } = require('../../utils/responseHelper');
 const { sendContactEmail } = require('../../utils/emailService');
-const AppError = require('../../utils/AppError');
 const logger = require('../../config/logger');
 
 /**
@@ -18,15 +18,6 @@ const logger = require('../../config/logger');
  */
 exports.submitContact = asyncHandler(async (req, res) => {
     const { name, email, subject, message } = req.body;
-
-    if (!name || !email || !subject || !message) {
-        throw new AppError('All fields are required (name, email, subject, message)', 400);
-    }
-
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(email)) {
-        throw new AppError('Please provide a valid email address', 400);
-    }
 
     await sendContactEmail({ name, email, subject, message });
 

@@ -19,7 +19,7 @@ export default function ContactSection() {
         e.preventDefault();
         setLoading(true);
         try {
-            await apiPost('/contact/submit', formData);
+            await apiPost('/contact', formData);
             setSubmitted(true);
             showToast('Message sent successfully!', 'success');
         } catch (err) {
