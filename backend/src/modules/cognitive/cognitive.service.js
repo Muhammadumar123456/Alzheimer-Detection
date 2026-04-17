@@ -78,6 +78,7 @@ exports.submitTest = async (userId, testData) => {
     // ------------------------------------------------------------------
     let predictionResult = null;
     if (mriUploadId) {
+        logger.info(`MRI Scan ID detected (${mriUploadId}). Triggering auto-prediction for user ${userId}`);
         const Result = require('../results/results.model');
 
         // Duplicate guard: check if a prediction already exists for this pair
@@ -85,7 +86,7 @@ exports.submitTest = async (userId, testData) => {
             mriScan: mriUploadId,
             cognitiveTest: cognitiveTest._id,
             status: { $in: ['completed', 'pending'] },
-        });
+        }).populate('cognitiveTest');
 
         if (existingResult) {
             logger.info(`Skipping auto-prediction — result already exists (${existingResult._id}, status: ${existingResult.status})`);
@@ -102,9 +103,13 @@ exports.submitTest = async (userId, testData) => {
                 // Log but don't fail the request — the cognitive test is already saved!
                 logger.error(`Auto-prediction failed for test ${cognitiveTest._id}: ${err.message}`, {
                     error: err.stack,
+                    userId,
+                    mriUploadId,
                 });
             }
         }
+    } else {
+        logger.info(`No MRI Scan ID provided. Skipping auto-prediction for test ${cognitiveTest._id}`);
     }
 
     return {

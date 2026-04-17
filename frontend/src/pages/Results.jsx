@@ -183,6 +183,8 @@ export default function Results() {
 
     // ── Has ML prediction? ──────────────────────────────────────────────
     const hasPrediction = !!(activePrediction?.prediction && activePrediction?.confidence != null);
+    const isPending = activePrediction?.status === 'pending';
+    const isFailed = activePrediction?.status === 'failed';
 
     // =====================================================================
     // LOADING STATE
@@ -308,18 +310,24 @@ export default function Results() {
                         Cognitive Assessment Results
                     </h2>
 
-                    {/* No MRI notice */}
-                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <p className="text-sm font-semibold text-blue-800">
-                                AI MRI Analysis Not Available
-                            </p>
-                            <p className="text-xs text-blue-600 mt-0.5">
-                                Upload an MRI scan during the diagnostic workflow to receive a full AI-powered analysis with multimodal prediction.
-                            </p>
+                    {/* Prediction Loading/Error states */}
+                    {!hasPrediction && (
+                        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-sm font-semibold text-blue-800">
+                                    {isPending ? "AI Analysis in Progress..." : isFailed ? "AI Analysis Failed" : "AI MRI Analysis Not Available"}
+                                </p>
+                                <p className="text-xs text-blue-600 mt-0.5">
+                                    {isPending 
+                                        ? "Our AI model is currently processing your MRI scan. This usually takes 10-30 seconds. Please refresh the page in a moment."
+                                        : isFailed
+                                        ? `There was an issue processing your MRI scan: ${activePrediction.errorMessage || "Unknown error"}. Please contact support.`
+                                        : "Upload an MRI scan during the diagnostic workflow to receive a full AI-powered analysis with multimodal prediction."}
+                                </p>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {percentage !== null && cogRisk && (
                         <div className={`mx-auto mb-4 p-6 rounded-2xl border-2 ${

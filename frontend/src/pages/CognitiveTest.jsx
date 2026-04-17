@@ -130,6 +130,10 @@ export default function CognitiveTest() {
         const symptomsReported = answers.filter((a) => a === 1).length;
 
         try {
+            if (import.meta.env.DEV) {
+                console.log("[CognitiveTest] Submitting assessment with MRI ID:", mriUploadId);
+            }
+
             const response = await apiPost("/cognitive/submit", {
                 rawAnswers: answers,
                 mriUploadId,

@@ -220,7 +220,7 @@ export default function UploadMRI() {
                 {/* Info Note */}
                 <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800">
-                        <span className="font-semibold">Note:</span> This is an educational FYP project. ML-based analysis will be available once the model is integrated. Currently, files are securely uploaded for future processing.
+                        <span className="font-semibold">Note:</span> Your MRI scans are processed by our multimodal AI model. Complete the cognitive assessment in the next step to trigger the full diagnostic prediction.
                     </p>
                 </div>
             </motion.div>
