@@ -29,7 +29,12 @@ const resultsSchema = new mongoose.Schema(
         },
         prediction: {
             type: String,
-            required: [true, 'Prediction class is required'],
+            required: [
+                function () {
+                    return this.status === 'completed';
+                },
+                'Prediction class is required for completed results',
+            ],
             enum: {
                 values: ['AD', 'CN', 'EMCI', 'LMCI'],
                 message: '{VALUE} is not a valid prediction. Use AD, CN, EMCI, or LMCI.',
@@ -37,7 +42,12 @@ const resultsSchema = new mongoose.Schema(
         },
         confidence: {
             type: Number,
-            required: [true, 'Confidence score is required'],
+            required: [
+                function () {
+                    return this.status === 'completed';
+                },
+                'Confidence score is required for completed results',
+            ],
             min: [0, 'Confidence cannot be less than 0'],
             max: [1, 'Confidence cannot exceed 1'],
         },

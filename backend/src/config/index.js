@@ -77,6 +77,7 @@ const config = {
         maxFileSize: parseInt(process.env.MAX_FILE_SIZE, 10) || 50 * 1024 * 1024, // 50MB
     },
 
+    // --- ML ---
     ml: {
         url: process.env.ML_SERVICE_URL || 'http://localhost:8000',
         timeout: parseInt(process.env.ML_SERVICE_TIMEOUT, 10) || 30000,
@@ -86,6 +87,18 @@ const config = {
         clientId: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         apiBaseUrl: process.env.API_BASE_URL,
+    },
+    // --- Redis & Async ---
+    redis: {
+        url: process.env.REDIS_URL || 'redis://localhost:6379',
+    },
+    useAsync: process.env.USE_ASYNC === 'true',
+    safeMode: process.env.SAFE_MODE !== 'false', // Default to true for demo safety
+
+    // --- Performance Limits ---
+    queue: {
+        jobTimeout: parseInt(process.env.JOB_TIMEOUT, 10) || 60000, // 60s
+        attempts: parseInt(process.env.JOB_ATTEMPTS, 10) || 3,
     },
 };
 

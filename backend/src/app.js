@@ -121,47 +121,14 @@ if (googleClientId && googleClientSecret && googleClientId !== 'YOUR_GOOGLE_CLIE
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
-// =========================================================================
-// HEALTH CHECK
-// =========================================================================
-
-app.get(`${config.apiPrefix}/health`, async (req, res) => {
-    const mongoose = require('mongoose');
-    const axios = require('axios');
-
-    // Database status
-    const dbState = mongoose.connection.readyState;
-    const dbStatus = dbState === 1 ? 'connected' : dbState === 2 ? 'connecting' : 'disconnected';
-
-    // ML service status
-    let mlStatus = { status: 'unknown', modelsLoaded: false };
-    try {
-        const mlRes = await axios.get(`${config.ml.url}/health`, { timeout: 5000 });
-        mlStatus = {
-            status: mlRes.data?.status || 'healthy',
-            modelsLoaded: mlRes.data?.models_loaded || false,
-        };
-    } catch {
-        mlStatus = { status: 'unavailable', modelsLoaded: false };
-    }
-
-    const isHealthy = dbStatus === 'connected';
-    const statusCode = isHealthy ? 200 : 503;
-
-    sendSuccess(res, statusCode, isHealthy ? 'API is healthy' : 'API is degraded', {
-        environment: config.env,
-        uptime: process.uptime(),
-        timestamp: new Date().toISOString(),
-        database: dbStatus,
-        mlService: mlStatus,
-    });
-});
+// HEALTH CHECK handled via router below
 
 // =========================================================================
 // ROUTES
 // =========================================================================
 
 const authRoutes = require('./modules/auth/auth.routes');
+const healthRoutes = require('./modules/health/health.routes');
 const userRoutes = require('./modules/user/user.routes');
 const uploadRoutes = require('./modules/upload/upload.routes');
 const cognitiveRoutes = require('./modules/cognitive/cognitive.routes');
@@ -173,6 +140,7 @@ const predictionRoutes = require('./modules/prediction/prediction.routes');
 
 // Mount routes
 app.use(`${config.apiPrefix}/auth`, authRoutes);
+app.use(`${config.apiPrefix}/health`, healthRoutes);
 app.use(`${config.apiPrefix}/user`, userRoutes);
 app.use(`${config.apiPrefix}/upload`, uploadLimiter, uploadRoutes);
 app.use(`${config.apiPrefix}/cognitive`, cognitiveRoutes);

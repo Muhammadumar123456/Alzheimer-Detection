@@ -13,6 +13,44 @@ const logger = require('../../config/logger');
 const { paginateQuery } = require('../../utils/paginate');
 
 /**
+ * Initialize a pending ML prediction result
+ * @param {object} data - { userId, mriScanId, cognitiveTestId }
+ * @returns {Promise<object>} Created pending result document
+ */
+exports.initiateResult = async ({ userId, mriScanId, cognitiveTestId }) => {
+    const result = await Result.create({
+        user: userId,
+        mriScan: mriScanId,
+        cognitiveTest: cognitiveTestId,
+        status: 'pending'
+    });
+
+    logger.info(`Prediction initialized (pending): ${result._id} for user ${userId}`);
+    return result;
+};
+
+/**
+ * Update an existing result (used by workers or post-prediction)
+ * @param {string} resultId - Mongoose ID of the result
+ * @param {object} updateData - Data to update
+ * @returns {Promise<object>} Updated result document
+ */
+exports.updateResult = async (resultId, updateData) => {
+    const result = await Result.findByIdAndUpdate(
+        resultId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+    );
+
+    if (!result) {
+        throw new AppError('Prediction result not found for update.', 404);
+    }
+
+    logger.info(`Prediction updated: ${resultId} (status: ${result.status})`);
+    return result;
+};
+
+/**
  * Store a new ML prediction result
  * @param {object} data - { userId, mriScanId, cognitiveTestId, prediction, confidence, status, modelVersion, details }
  * @returns {Promise<object>} Created result document
