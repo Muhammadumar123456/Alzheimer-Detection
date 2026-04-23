@@ -32,11 +32,21 @@ const mongodbUri = process.env.MONGODB_URI || configDefaults.MONGODB_URI;
 const jwtSecret = process.env.JWT_SECRET || configDefaults.JWT_SECRET;
 const corsOrigin = process.env.CORS_ORIGIN || configDefaults.CORS_ORIGIN;
 
-if (!process.env.MONGODB_URI) {
-    console.warn('⚠️  WARNING: MONGODB_URI not found in .env. Using hardcoded fallback.');
-}
-if (!process.env.JWT_SECRET) {
-    console.warn('⚠️  WARNING: JWT_SECRET not found in .env. Using hardcoded fallback.');
+if (process.env.NODE_ENV === 'production') {
+    if (!process.env.MONGODB_URI) {
+        throw new Error('FATAL: MONGODB_URI is required in production mode.');
+    }
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET === configDefaults.JWT_SECRET) {
+        throw new Error('FATAL: A unique and secure JWT_SECRET is required in production mode.');
+    }
+} else {
+    // Development/Test warnings
+    if (!process.env.MONGODB_URI) {
+        console.warn('⚠️  WARNING: MONGODB_URI not found in .env. Using hardcoded fallback.');
+    }
+    if (!process.env.JWT_SECRET) {
+        console.warn('⚠️  WARNING: JWT_SECRET not found in .env. Using hardcoded fallback.');
+    }
 }
 
 // =========================================================================

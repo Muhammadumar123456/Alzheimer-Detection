@@ -11,8 +11,12 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
+const compression = require('compression');
+const hpp = require('hpp');
+const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
 const passport = require('passport');
+const path = require('path');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const config = require('./config');
 const logger = require('./config/logger');
@@ -24,9 +28,13 @@ const { sendSuccess } = require('./utils/responseHelper');
 const app = express();
 
 // =========================================================================
-// SECURITY MIDDLEWARE
+// SECURITY & PERFORMANCE MIDDLEWARE
 // =========================================================================
 
+// Trust proxy (needed for rate limiting behind load balancers/proxies)
+app.set('trust proxy', 1);
+
+// Set security HTTP headers
 app.use(
     helmet({
         hsts: {
@@ -39,7 +47,7 @@ app.use(
                 defaultSrc: ["'self'"],
                 scriptSrc: ["'self'"],
                 styleSrc: ["'self'", "'unsafe-inline'"],
-                imgSrc: ["'self'", 'data:'],
+                imgSrc: ["'self'", 'data:', 'blob:'],
                 connectSrc: ["'self'"],
                 fontSrc: ["'self'"],
                 objectSrc: ["'none'"],
@@ -52,6 +60,18 @@ app.use(
         referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     })
 );
+
+// Compression for faster response times
+app.use(compression());
+
+// Data sanitization against NoSQL query injection
+app.use(mongoSanitize());
+
+// Data sanitization against XSS
+app.use(xss());
+
+// Prevent HTTP Parameter Pollution
+app.use(hpp());
 
 // CORS — allow frontend origin
 app.use(
@@ -78,6 +98,9 @@ app.use(
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(mongoSanitize());
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Rate limiting
 app.use(config.apiPrefix, apiLimiter);
