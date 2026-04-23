@@ -161,6 +161,30 @@ export default function Results() {
         return null;
     }, [immediateState, mlResults]);
 
+    // ── Polling for Pending Results ──────────────────────────────────────
+    useEffect(() => {
+        let pollInterval = null;
+
+        if (activePrediction?.status === "pending") {
+            if (import.meta.env.DEV) {
+                console.log("[Results] Active prediction is pending. Starting polling...");
+            }
+            pollInterval = setInterval(() => {
+                // We use a silent fetch here (could pass a flag to fetchData if needed)
+                fetchData();
+            }, 4000); // Poll every 4 seconds
+        }
+
+        return () => {
+            if (pollInterval) {
+                if (import.meta.env.DEV) {
+                    console.log("[Results] Cleaning up polling interval.");
+                }
+                clearInterval(pollInterval);
+            }
+        };
+    }, [activePrediction?.status, fetchData]);
+
     // ── Cognitive scores ────────────────────────────────────────────────
     const latestTest = cognitiveTests[0] || null;
     const mmseScore = latestTest?.mmseScore ?? null;
@@ -185,6 +209,7 @@ export default function Results() {
     const hasPrediction = !!(activePrediction?.prediction && activePrediction?.confidence != null);
     const isPending = activePrediction?.status === 'pending';
     const isFailed = activePrediction?.status === 'failed';
+    const showAiSection = hasPrediction || isPending;
 
     // =====================================================================
     // LOADING STATE
@@ -228,7 +253,7 @@ export default function Results() {
             {/* ═══════════════════════════════════════════════════════════════
                 SECTION 1: AI DIAGNOSIS (only if ML prediction exists)
                ═══════════════════════════════════════════════════════════════ */}
-            {hasPrediction ? (
+            {showAiSection ? (
                 <>
                     {/* Page Title */}
                     <motion.div
@@ -239,27 +264,29 @@ export default function Results() {
                         <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 rounded-full mb-4">
                             <Zap className="w-4 h-4 text-indigo-600" />
                             <span className="text-sm font-bold text-indigo-700">
-                                AI-Powered Diagnostic Analysis
+                                {isPending ? "AI Analysis in Progress" : "AI-Powered Diagnostic Analysis"}
                             </span>
                         </div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
-                            Your Diagnostic Results
+                            {isPending ? "Processing Your MRI..." : "Your Diagnostic Results"}
                         </h1>
                     </motion.div>
 
-                    {/* Diagnosis Card */}
+                    {/* Diagnosis Card (handles its own loading state) */}
                     <DiagnosisCard
                         prediction={activePrediction.prediction}
                         confidence={activePrediction.confidence}
+                        loading={isPending}
                     />
 
-                    {/* Confidence Meter + Probability Chart */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.15 }}
-                        className="grid md:grid-cols-2 gap-6"
-                    >
+                    {/* Confidence Meter + Probability Chart (only if completed) */}
+                    {!isPending && hasPrediction && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.15 }}
+                            className="grid md:grid-cols-2 gap-6"
+                        >
                         {/* Confidence Gauge */}
                         <div className="bg-white shadow-xl rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center">
                             <h3 className="text-lg font-bold text-gray-800 mb-5 flex items-center gap-2">
@@ -291,6 +318,7 @@ export default function Results() {
                             />
                         </div>
                     </motion.div>
+                    )}
                 </>
             ) : (
                 /* ═════════════════════════════════════════════════════════════
@@ -598,26 +626,47 @@ export default function Results() {
                                 key={file._id}
                                 className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100"
                             >
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-blue-100">
-                                        <Upload className="w-5 h-5 text-blue-600" />
-                                    </div>
+                                <div className="flex items-center gap-4">
+                                    {file.fileUrl ? (
+                                        <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 flex-shrink-0">
+                                            <img
+                                                src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${file.fileUrl}`}
+                                                alt="MRI Thumbnail"
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = "https://via.placeholder.com/48?text=MRI";
+                                                }}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="p-2 rounded-lg bg-blue-100 flex-shrink-0">
+                                            <Upload className="w-6 h-6 text-blue-600" />
+                                        </div>
+                                    )}
                                     <div>
-                                        <p className="font-semibold text-gray-800 truncate max-w-[200px] sm:max-w-none">
+                                        <p className="font-semibold text-gray-800 truncate max-w-[150px] sm:max-w-xs">
                                             {file.fileName}
                                         </p>
-                                        <p className="text-sm text-gray-500">
-                                            {new Date(file.uploadedAt).toLocaleDateString()} at{" "}
-                                            {new Date(file.uploadedAt).toLocaleTimeString([], {
-                                                hour: "2-digit",
-                                                minute: "2-digit",
-                                            })}
-                                        </p>
+                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                            <span>{new Date(file.uploadedAt).toLocaleDateString()}</span>
+                                            <span>•</span>
+                                            <span>
+                                                {file.fileSize
+                                                    ? `${(file.fileSize / 1024).toFixed(1)} KB`
+                                                    : "Size unknown"}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                                <span className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
-                                    Uploaded
-                                </span>
+                                <div className="flex flex-col items-end gap-1">
+                                    <span className="text-[10px] uppercase font-bold tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                                        {file.mimeType?.split('/')[1] || 'IMG'}
+                                    </span>
+                                    <span className="text-xs text-gray-400">
+                                        ID: {file._id.slice(-6)}
+                                    </span>
+                                </div>
                             </div>
                         ))}
                     </div>

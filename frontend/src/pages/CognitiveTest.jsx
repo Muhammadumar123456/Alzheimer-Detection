@@ -147,10 +147,14 @@ export default function CognitiveTest() {
             // Extract ML prediction if the auto-prediction ran
             const predictionData = response.data.prediction || null;
 
+            const isPending = response.data.prediction?.status === "pending";
+
             showToast(
-                predictionData
-                    ? "Assessment submitted — AI analysis complete!"
-                    : "Cognitive assessment submitted successfully!",
+                isPending
+                    ? "Assessment submitted — MRI analysis starting..."
+                    : response.data.prediction
+                        ? "Assessment submitted — AI analysis complete!"
+                        : "Cognitive assessment submitted successfully!",
                 "success"
             );
 

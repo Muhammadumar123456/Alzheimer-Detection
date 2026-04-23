@@ -13,7 +13,7 @@
 
 import { motion } from "framer-motion";
 import {
-    ShieldCheck, ShieldAlert, AlertTriangle, AlertOctagon,
+    ShieldCheck, ShieldAlert, AlertTriangle, AlertOctagon, Loader2, Cpu
 } from "lucide-react";
 
 // ── Class metadata ──────────────────────────────────────────────────────────
@@ -82,7 +82,35 @@ const CLASS_META = {
 
 export { CLASS_META };
 
-export default function DiagnosisCard({ prediction, confidence }) {
+export default function DiagnosisCard({ prediction, confidence, loading = false }) {
+    if (loading) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative overflow-hidden rounded-2xl border-2 border-indigo-200 bg-indigo-50 p-8 shadow-xl shadow-indigo-100/60"
+            >
+                <div className="relative flex flex-col items-center text-center gap-5 py-4">
+                    <div className="relative w-20 h-20">
+                        <Loader2 className="w-20 h-20 animate-spin text-indigo-600" />
+                        <Cpu className="w-8 h-8 text-indigo-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                            Processing Analysis
+                        </p>
+                        <h2 className="text-2xl font-extrabold text-indigo-800">
+                            AI is Analyzing MRI Scan...
+                        </h2>
+                    </div>
+                    <p className="text-sm text-indigo-600 leading-relaxed max-w-md bg-white/50 p-3 rounded-xl border border-indigo-100">
+                        Our model is currently processing your brain imaging data. This usually takes 10–30 seconds. The result will appear here automatically.
+                    </p>
+                </div>
+            </motion.div>
+        );
+    }
+
     const meta = CLASS_META[prediction] || CLASS_META.CN;
     const Icon = meta.icon;
     const pct = Math.round((confidence ?? 0) * 100);
