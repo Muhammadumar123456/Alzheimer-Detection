@@ -46,7 +46,7 @@ exports.predict = asyncHandler(async (req, res) => {
                 const pendingResult = await resultsService.initiateResult(predictionData);
 
                 // 2. Add job to queue with the result ID
-                const job = await predictionQueue.add('ml-prediction', {
+                const job = await predictionQueue.add('analyze-alzheimer', {
                     ...predictionData,
                     resultId: pendingResult._id,
                 });

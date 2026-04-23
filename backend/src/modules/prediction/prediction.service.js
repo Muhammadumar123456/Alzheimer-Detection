@@ -45,9 +45,10 @@ exports.checkMLHealth = async () => {
  * @param {string} params.mriScanId    - MRI document ID
  * @param {string} params.cognitiveTestId - CognitiveTest document ID
  * @param {string} params.userId       - Authenticated user's ID
- * @returns {Promise<object>} Stored prediction result document
+ * @param {string} [params.resultId]   - Optional: Existing result ID to update (for async flow)
+ * @returns {Promise<object>} Stored or updated prediction result document
  */
-exports.runPrediction = async ({ mriScanId, cognitiveTestId, userId }) => {
+exports.runPrediction = async ({ mriScanId, cognitiveTestId, userId, resultId }) => {
     // ------------------------------------------------------------------
     // 1. Fetch MRI record
     // ------------------------------------------------------------------
@@ -69,13 +70,14 @@ exports.runPrediction = async ({ mriScanId, cognitiveTestId, userId }) => {
     // ------------------------------------------------------------------
     // 3. Call ML service via Shared Client
     // ------------------------------------------------------------------
-    logger.info(`Running ML prediction (Sync Fallback) for user: ${userId}`);
+    const isAsync = !!resultId;
+    logger.info(`Running ML prediction (${isAsync ? 'Async' : 'Sync'}) for user: ${userId}`);
     const mlData = await mlClient.predict(mriRecord, cognitiveTest.rawAnswers);
 
     // ------------------------------------------------------------------
-    // 4. Store result in MongoDB
+    // 4. Persist result in MongoDB
     // ------------------------------------------------------------------
-    const storedResult = await resultsService.storePrediction({
+    const resultPayload = {
         userId,
         mriScanId,
         cognitiveTestId,
@@ -88,10 +90,16 @@ exports.runPrediction = async ({ mriScanId, cognitiveTestId, userId }) => {
         details: {
             mlServiceUrl: config.ml.url,
             rawProbabilities: mlData.class_probabilities,
-            isSyncFallback: true
+            isSyncFallback: !isAsync
         },
-    });
+    };
 
-    return storedResult;
+    if (resultId) {
+        // Update existing record (Async Flow)
+        return await resultsService.updateResult(resultId, resultPayload);
+    } else {
+        // Create new record (Sync Flow)
+        return await resultsService.storePrediction(resultPayload);
+    }
 };
 
