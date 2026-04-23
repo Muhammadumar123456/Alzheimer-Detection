@@ -32,10 +32,13 @@ exports.uploadMRI = asyncHandler(async (req, res) => {
             userId: req.user.id,
             fileName: file.filename,
             filePath: file.path,
+            fileSize: file.size,
+            mimeType: file.mimetype,
         });
         savedFiles.push({
             id: mriRecord._id,
             fileName: mriRecord.fileName,
+            fileUrl: mriRecord.fileUrl,
             uploadedAt: mriRecord.uploadedAt,
         });
     }

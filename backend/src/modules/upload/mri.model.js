@@ -26,6 +26,18 @@ const mriSchema = new mongoose.Schema(
             type: String,
             required: [true, 'File path is required'],
         },
+        mimeType: {
+            type: String,
+            default: 'image/jpeg',
+        },
+        fileSize: {
+            type: Number, // in bytes
+        },
+        storageType: {
+            type: String,
+            enum: ['local', 'cloudinary', 's3'],
+            default: 'local',
+        },
         uploadedAt: {
             type: Date,
             default: Date.now,
@@ -33,10 +45,32 @@ const mriSchema = new mongoose.Schema(
         },
     },
     {
-        toJSON: { virtuals: true },
-        toObject: { virtuals: true },
+        toJSON: {
+            virtuals: true,
+            getters: true,
+            transform: function (doc, ret) {
+                delete ret.filePath; // Hide internal filesystem paths from API response
+                return ret;
+            },
+        },
+        toObject: { virtuals: true, getters: true },
+        timestamps: true,
     }
 );
+
+/**
+ * Virtual for serving the file URL to the frontend.
+ * If storage is local, it generates a relative API URL.
+ */
+mriSchema.virtual('fileUrl').get(function () {
+    if (this.storageType === 'local') {
+        // Returns e.g. /uploads/mri/123-timestamp-image.jpg
+        // The app must serve the 'uploads' folder statically at /uploads
+        return `/${this.filePath.replace(/\\/g, '/')}`;
+    }
+    // For cloud storage, filePath would be the full URL
+    return this.filePath;
+});
 
 const MRI = mongoose.model('MRI', mriSchema);
 

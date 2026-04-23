@@ -8,6 +8,7 @@
  */
 
 const fs = require('fs').promises;
+const path = require('path');
 const MRI = require('./mri.model');
 const AppError = require('../../utils/AppError');
 const logger = require('../../config/logger');
@@ -15,17 +16,31 @@ const { paginateQuery } = require('../../utils/paginate');
 
 /**
  * Save MRI upload metadata to the database
- * @param {object} data - { userId, fileName, filePath }
+ * @param {object} data - { userId, fileName, filePath, fileSize, mimeType }
  * @returns {Promise<object>} Created MRI document
  */
-exports.saveMRIRecord = async ({ userId, fileName, filePath }) => {
+exports.saveMRIRecord = async ({ userId, fileName, filePath, fileSize, mimeType }) => {
+    // ------------------------------------------------------------------
+    // PRODUCTION HARDENING: Store relative paths, not absolute.
+    // This ensures the DB remains portable across different environments.
+    // ------------------------------------------------------------------
+    let standardizedPath = filePath;
+    if (path.isAbsolute(filePath)) {
+        // Calculate path relative to the backend root directory
+        const backendRoot = path.join(__dirname, '..', '..');
+        standardizedPath = path.relative(backendRoot, filePath);
+    }
+
     const mriRecord = await MRI.create({
         user: userId,
         fileName,
-        filePath,
+        filePath: standardizedPath,
+        fileSize,
+        mimeType,
+        storageType: 'local',
     });
 
-    logger.info(`MRI file uploaded: ${fileName} by user ${userId}`);
+    logger.info(`MRI metadata saved: ${fileName} (${(fileSize / 1024).toFixed(2)} KB)`);
 
     return mriRecord;
 };
@@ -40,10 +55,7 @@ exports.getMRIsByUser = async (userId, paginationParams) => {
     const result = await paginateQuery(
         MRI,
         { user: userId },
-        paginationParams,
-        {
-            select: '-filePath', // Never expose filesystem paths
-        }
+        paginationParams
     );
 
     return result;
@@ -52,10 +64,10 @@ exports.getMRIsByUser = async (userId, paginationParams) => {
 /**
  * Get a single MRI record by ID
  * @param {string} mriId - MRI document ID
- * @returns {Promise<object>} MRI document (without filePath)
+ * @returns {Promise<object>} MRI document
  */
 exports.getMRIById = async (mriId) => {
-    const mri = await MRI.findById(mriId).select('-filePath');
+    const mri = await MRI.findById(mriId);
 
     if (!mri) {
         throw new AppError('MRI record not found', 404);
