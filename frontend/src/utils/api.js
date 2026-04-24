@@ -31,7 +31,17 @@ export async function apiRequest(endpoint, options = {}) {
     }
 
     const response = await fetch(`${API_BASE}${endpoint}`, config);
-    const data = await response.json();
+    
+    // Safe response parsing
+    let data = {};
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+        try {
+            data = await response.json();
+        } catch (err) {
+            console.error('[API] JSON parse failed:', err);
+        }
+    }
 
     if (!response.ok) {
         const message =
