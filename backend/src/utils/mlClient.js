@@ -51,30 +51,70 @@ exports.checkHealth = async () => {
 };
 
 /**
- * Send multimodal data for Alzheimer prediction
+ * Send multimodal data for Alzheimer prediction.
+ * 
+ * Supports dual storage modes:
+ *   - LOCAL:      reads MRI from disk via fs.createReadStream
+ *   - CLOUDINARY: fetches MRI from remote URL via axios stream
  * 
  * @param {object} mriRecord - MRI document from DB
  * @param {Array} cognitiveAnswers - Array of 30 binary answers
  * @returns {Promise<object>} Prediction results from ML service
  */
 exports.predict = async (mriRecord, cognitiveAnswers) => {
-    const mriFilePath = path.resolve(mriRecord.filePath);
-    
-    // Safety check for file
-    try {
-        await fs.promises.access(mriFilePath, fs.constants.R_OK);
-    } catch {
-        throw new AppError('MRI scan file not found on disk.', 404);
+    const isCloudFile = mriRecord.storageType === 'cloudinary';
+    const fileName = mriRecord.fileName || 'mri_scan.jpg';
+
+    // ------------------------------------------------------------------
+    // Resolve file source based on storage type
+    // ------------------------------------------------------------------
+    let getFileStream;
+
+    if (isCloudFile) {
+        // CLOUD MODE: filePath contains the full Cloudinary URL
+        const cloudUrl = mriRecord.filePath;
+        logger.info(`ML Client: fetching MRI from cloud URL for prediction`);
+
+        // Pre-validate that the URL is reachable
+        try {
+            await axios.head(cloudUrl, { timeout: 5000 });
+        } catch {
+            throw new AppError('MRI scan file not accessible from cloud storage.', 404);
+        }
+
+        // Factory: returns a fresh stream for each retry attempt
+        getFileStream = async () => {
+            const response = await axios.get(cloudUrl, {
+                responseType: 'stream',
+                timeout: config.ml.timeout,
+            });
+            return response.data;
+        };
+    } else {
+        // LOCAL MODE: filePath is a relative disk path (existing behavior)
+        const mriFilePath = path.resolve(mriRecord.filePath);
+
+        // Safety check for file
+        try {
+            await fs.promises.access(mriFilePath, fs.constants.R_OK);
+        } catch {
+            throw new AppError('MRI scan file not found on disk.', 404);
+        }
+
+        // Factory: returns a fresh stream for each retry attempt
+        getFileStream = async () => fs.createReadStream(mriFilePath);
     }
 
+    // ------------------------------------------------------------------
+    // Retry loop (shared between both storage modes)
+    // ------------------------------------------------------------------
     let mlResponse;
     let lastError;
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
             const formData = new FormData();
-            const fileStream = fs.createReadStream(mriFilePath);
-            const fileName = mriRecord.fileName || path.basename(mriFilePath);
+            const fileStream = await getFileStream();
 
             formData.append('mri_file', fileStream, {
                 filename: fileName,
