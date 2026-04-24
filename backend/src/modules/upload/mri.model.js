@@ -38,6 +38,9 @@ const mriSchema = new mongoose.Schema(
             enum: ['local', 'cloudinary', 's3'],
             default: 'local',
         },
+        cloudinaryPublicId: {
+            type: String,
+        },
         uploadedAt: {
             type: Date,
             default: Date.now,

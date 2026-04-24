@@ -13,47 +13,97 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const { Readable } = require('stream');
+const cloudinary = require('cloudinary').v2;
 const MRI = require('./mri.model');
+const config = require('../../config');
 const AppError = require('../../utils/AppError');
 const logger = require('../../config/logger');
 const { paginateQuery } = require('../../utils/paginate');
 
 // =========================================================================
-// CLOUD STORAGE PLACEHOLDERS (to be implemented in future Cloudinary task)
+// CLOUDINARY CONFIGURATION
+// =========================================================================
+
+cloudinary.config({
+    cloud_name: config.storage.cloudinary.cloudName,
+    api_key: config.storage.cloudinary.apiKey,
+    api_secret: config.storage.cloudinary.apiSecret,
+});
+
+// =========================================================================
+// CLOUD STORAGE OPERATIONS
 // =========================================================================
 
 /**
- * Placeholder: Upload a file buffer to Cloudinary.
- * Will be replaced with actual cloudinary.v2.uploader.upload_stream() call.
+ * Upload a file buffer to Cloudinary using a promise-wrapped upload_stream.
  *
  * @param {Buffer} fileBuffer - The file buffer from multer memoryStorage
  * @param {string} fileName - Original file name for reference
  * @returns {Promise<{ url: string, publicId: string }>} Cloud file metadata
  */
 exports.uploadToCloud = async (fileBuffer, fileName) => {
-    // TODO: Implement Cloudinary upload in future task
-    logger.warn(`Cloud upload called but not yet implemented. File: ${fileName}`);
-    throw new AppError('Cloud storage (Cloudinary) is not yet configured. Set STORAGE_TYPE=local.', 501);
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            {
+                folder: config.storage.cloudinary.folder,
+                resource_type: 'auto',
+                public_id: `${Date.now()}-${path.parse(fileName).name}`,
+            },
+            (error, result) => {
+                if (error) {
+                    logger.error(`Cloudinary upload failed: ${error.message}`);
+                    return reject(new AppError('Failed to upload MRI to cloud storage.', 500));
+                }
+                logger.info(`Cloudinary upload successful: ${result.secure_url}`);
+                resolve({
+                    url: result.secure_url,
+                    publicId: result.public_id,
+                });
+            }
+        );
+
+        // Pipe buffer to the upload stream
+        Readable.from(fileBuffer).pipe(uploadStream);
+    });
 };
 
 /**
- * Placeholder: Delete a file from Cloudinary by its URL/public ID.
- * Will be replaced with actual cloudinary.v2.uploader.destroy() call.
+ * Delete a file from Cloudinary by its public ID.
  *
- * @param {string} filePath - The Cloudinary URL or public ID
+ * @param {string} publicId - The Cloudinary public ID
  * @returns {Promise<void>}
  */
-const deleteFromCloud = async (filePath) => {
-    // TODO: Implement Cloudinary deletion in future task
-    logger.warn(`Cloud delete not yet implemented. Skipping deletion of: ${filePath}`);
+const deleteFromCloud = async (publicId) => {
+    if (!publicId) return;
+
+    try {
+        const result = await cloudinary.uploader.destroy(publicId);
+        if (result.result === 'ok') {
+            logger.info(`Cloudinary asset deleted: ${publicId}`);
+        } else {
+            logger.warn(`Cloudinary deletion returned status: ${result.result} for ID: ${publicId}`);
+        }
+    } catch (err) {
+        // Log but don't fail the request
+        logger.warn(`Cloudinary deletion error for ID: ${publicId} — ${err.message}`);
+    }
 };
 
 /**
  * Save MRI upload metadata to the database
- * @param {object} data - { userId, fileName, filePath, fileSize, mimeType, storageType }
+ * @param {object} data - { userId, fileName, filePath, fileSize, mimeType, storageType, cloudinaryPublicId }
  * @returns {Promise<object>} Created MRI document
  */
-exports.saveMRIRecord = async ({ userId, fileName, filePath, fileSize, mimeType, storageType = 'local' }) => {
+exports.saveMRIRecord = async ({ 
+    userId, 
+    fileName, 
+    filePath, 
+    fileSize, 
+    mimeType, 
+    storageType = 'local',
+    cloudinaryPublicId = null
+}) => {
     // ------------------------------------------------------------------
     // PRODUCTION HARDENING: Store relative paths for local storage,
     // or full URLs for cloud storage.
@@ -73,9 +123,10 @@ exports.saveMRIRecord = async ({ userId, fileName, filePath, fileSize, mimeType,
         fileSize,
         mimeType,
         storageType,
+        cloudinaryPublicId,
     });
 
-    logger.info(`MRI metadata saved: ${fileName} (${(fileSize / 1024).toFixed(2)} KB)`);
+    logger.info(`MRI metadata saved: ${fileName} (${(fileSize / 1024).toFixed(2)} KB) [Storage: ${storageType}]`);
 
     return mriRecord;
 };
@@ -131,7 +182,7 @@ exports.deleteMRI = async (mriId, userId) => {
 
     // Delete file (disk or cloud based on storage type)
     if (mri.storageType === 'cloudinary') {
-        await deleteFromCloud(mri.filePath);
+        await deleteFromCloud(mri.cloudinaryPublicId);
     } else {
         // Local mode: delete physical file from disk
         try {
@@ -163,7 +214,7 @@ exports.deleteAllMRIsByUser = async (userId) => {
     // Delete files (disk or cloud based on each record's storage type)
     for (const mri of mris) {
         if (mri.storageType === 'cloudinary') {
-            await deleteFromCloud(mri.filePath);
+            await deleteFromCloud(mri.cloudinaryPublicId);
         } else {
             try {
                 const absolutePath = path.resolve(__dirname, '..', '..', mri.filePath);
