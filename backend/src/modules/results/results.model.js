@@ -100,6 +100,9 @@ const resultsSchema = new mongoose.Schema(
     }
 );
 
+// Compound index for optimized result queries (Dashboard/History)
+resultsSchema.index({ user: 1, status: 1, createdAt: -1 });
+
 const Result = mongoose.model('Result', resultsSchema);
 
 module.exports = Result;
