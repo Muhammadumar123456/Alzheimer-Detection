@@ -54,8 +54,7 @@ export default function Login() {
     }
 
     const handleGoogleLogin = () => {
-        // Hardcoded backend URL fallback
-        const backendBaseUrl = 'http://localhost:5000'; 
+        const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'; 
         window.location.href = `${backendBaseUrl}/api/auth/google`;
     };
 
