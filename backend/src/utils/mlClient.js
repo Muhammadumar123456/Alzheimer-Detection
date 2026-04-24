@@ -109,7 +109,7 @@ exports.predict = async (mriRecord, cognitiveAnswers) => {
     }
 
     if (!mlResponse) {
-        throw this._mapError(lastError);
+        throw exports._mapError(lastError);
     }
 
     return mlResponse.data;
