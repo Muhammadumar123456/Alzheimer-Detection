@@ -42,6 +42,7 @@ exports.uploadMRI = asyncHandler(async (req, res) => {
                 fileSize: file.size,
                 mimeType: file.mimetype,
                 storageType: 'cloudinary',
+                cloudinaryPublicId: cloudData.publicId,
             });
         } else {
             // LOCAL MODE: file.path exists (existing behavior)
