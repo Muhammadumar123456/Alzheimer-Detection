@@ -57,6 +57,20 @@ if (process.env.NODE_ENV === 'production') {
     }
 }
 
+// Storage type validation
+const storageType = (process.env.STORAGE_TYPE || 'local').toLowerCase();
+if (!['local', 'cloudinary'].includes(storageType)) {
+    throw new Error(`FATAL: Invalid STORAGE_TYPE "${storageType}". Must be "local" or "cloudinary".`);
+}
+if (storageType === 'cloudinary') {
+    const cloudName = (process.env.CLOUDINARY_CLOUD_NAME || '').trim();
+    const apiKey = (process.env.CLOUDINARY_API_KEY || '').trim();
+    const apiSecret = (process.env.CLOUDINARY_API_SECRET || '').trim();
+    if (!cloudName || !apiKey || !apiSecret) {
+        console.warn('⚠️  WARNING: STORAGE_TYPE is "cloudinary" but Cloudinary credentials are missing. Uploads will fail.');
+    }
+}
+
 // =========================================================================
 // CONFIG OBJECT
 // =========================================================================
@@ -93,6 +107,17 @@ const config = {
     upload: {
         dir: process.env.UPLOAD_DIR || './uploads',
         maxFileSize: parseInt(process.env.MAX_FILE_SIZE, 10) || 50 * 1024 * 1024, // 50MB
+    },
+
+    // --- Storage (Dual Mode: local / cloudinary) ---
+    storage: {
+        type: process.env.STORAGE_TYPE || 'local', // 'local' | 'cloudinary'
+        cloudinary: {
+            cloudName: (process.env.CLOUDINARY_CLOUD_NAME || '').trim(),
+            apiKey: (process.env.CLOUDINARY_API_KEY || '').trim(),
+            apiSecret: (process.env.CLOUDINARY_API_SECRET || '').trim(),
+            folder: process.env.CLOUDINARY_FOLDER || 'alzheimer-mri',
+        },
     },
 
     // --- ML ---
