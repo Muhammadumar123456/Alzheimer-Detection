@@ -96,7 +96,8 @@ exports.deleteMRI = async (mriId, userId) => {
 
     // Delete physical file from disk
     try {
-        await fs.unlink(mri.filePath);
+        const absolutePath = path.resolve(__dirname, '..', '..', mri.filePath);
+        await fs.unlink(absolutePath);
         logger.info(`Physical MRI file deleted: ${mri.filePath}`);
     } catch (err) {
         // File may already be missing — log but don't fail
@@ -122,7 +123,8 @@ exports.deleteAllMRIsByUser = async (userId) => {
     // Delete physical files
     for (const mri of mris) {
         try {
-            await fs.unlink(mri.filePath);
+            const absolutePath = path.resolve(__dirname, '..', '..', mri.filePath);
+            await fs.unlink(absolutePath);
         } catch (err) {
             logger.warn(`Could not delete physical file: ${mri.filePath} — ${err.message}`);
         }
