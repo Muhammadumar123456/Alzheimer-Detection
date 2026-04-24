@@ -1,21 +1,32 @@
 /**
  * =============================================================================
- * FILE UPLOAD MIDDLEWARE (Multer)
+ * FILE UPLOAD MIDDLEWARE (Multer — Dual Storage)
  * =============================================================================
- * Configures multer for MRI file uploads.
- * - Storage: uploads/mri/
+ * Configures multer for MRI file uploads with dual storage support:
+ *
+ *   STORAGE_TYPE=local      → diskStorage  (saves to uploads/mri/)
+ *   STORAGE_TYPE=cloudinary  → memoryStorage (file held in buffer for cloud upload)
+ *
  * - Allowed types: .jpg, .jpeg, .png (strict image-only)
  * - Max file size: 50MB
- * - Auto-creates upload directory if missing
+ * - Auto-creates upload directory if missing (local mode)
  * - Post-upload magic-byte verification to reject renamed non-images
+ *   (works on both disk files and in-memory buffers)
  * =============================================================================
  */
 
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const config = require('../config');
 const AppError = require('../utils/AppError');
 const logger = require('../config/logger');
+
+// =========================================================================
+// STORAGE MODE (from config)
+// =========================================================================
+
+const IS_CLOUD_STORAGE = config.storage.type === 'cloudinary';
 
 // =========================================================================
 // CONFIGURATION
@@ -41,10 +52,10 @@ const MAGIC_BYTES = {
 };
 
 // =========================================================================
-// AUTO-CREATE UPLOAD DIRECTORY
+// AUTO-CREATE UPLOAD DIRECTORY (local mode only)
 // =========================================================================
 
-if (!fs.existsSync(UPLOAD_DIR)) {
+if (!IS_CLOUD_STORAGE && !fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
@@ -71,10 +82,14 @@ const sanitizeFilename = (filename) => {
 };
 
 // =========================================================================
-// STORAGE CONFIGURATION
+// STORAGE CONFIGURATION (Conditional: Disk vs Memory)
 // =========================================================================
 
-const storage = multer.diskStorage({
+/**
+ * Disk storage — used when STORAGE_TYPE=local (existing behavior).
+ * Files are saved to UPLOAD_DIR with a sanitized, unique name.
+ */
+const diskStorageEngine = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, UPLOAD_DIR);
     },
@@ -96,6 +111,15 @@ const storage = multer.diskStorage({
         cb(null, generatedName);
     },
 });
+
+/**
+ * Memory storage — used when STORAGE_TYPE=cloudinary.
+ * Files are held in req.file.buffer for cloud upload by the controller.
+ */
+const memoryStorageEngine = multer.memoryStorage();
+
+// Select storage engine based on config
+const storage = IS_CLOUD_STORAGE ? memoryStorageEngine : diskStorageEngine;
 
 // =========================================================================
 // FILE FILTER — extension + MIME type validation
@@ -144,7 +168,27 @@ const fileFilter = (req, file, cb) => {
 // =========================================================================
 
 /**
- * Check whether a file's first bytes match a known image signature.
+ * Core magic-byte check against a Buffer.
+ * Shared by both disk-based and memory-based validation paths.
+ * @param {Buffer} buffer - At least 8 bytes from the start of the file
+ * @returns {boolean} True if the buffer starts with a valid JPEG or PNG signature
+ */
+const checkMagicBytesFromBuffer = (buffer) => {
+    // Check JPEG signatures
+    for (const sig of MAGIC_BYTES.jpeg) {
+        if (buffer.subarray(0, sig.length).equals(sig)) return true;
+    }
+
+    // Check PNG signatures
+    for (const sig of MAGIC_BYTES.png) {
+        if (buffer.subarray(0, sig.length).equals(sig)) return true;
+    }
+
+    return false;
+};
+
+/**
+ * Validate magic bytes from a file on disk (local storage mode).
  * @param {string} filePath - Absolute path to the uploaded file
  * @returns {Promise<boolean>} True if the file has valid JPEG or PNG magic bytes
  */
@@ -154,27 +198,29 @@ const validateMagicBytes = async (filePath) => {
     try {
         const buffer = Buffer.alloc(HEADER_SIZE);
         await fd.read(buffer, 0, HEADER_SIZE, 0);
-
-        // Check JPEG signatures
-        for (const sig of MAGIC_BYTES.jpeg) {
-            if (buffer.subarray(0, sig.length).equals(sig)) return true;
-        }
-
-        // Check PNG signatures
-        for (const sig of MAGIC_BYTES.png) {
-            if (buffer.subarray(0, sig.length).equals(sig)) return true;
-        }
-
-        return false;
+        return checkMagicBytesFromBuffer(buffer);
     } finally {
         await fd.close();
     }
 };
 
 /**
- * Post-upload middleware that reads the saved file's magic bytes to verify
- * it is actually a JPEG or PNG image. Deletes the file if validation fails.
- * This catches cases where a non-image file is renamed with a .jpg/.png extension.
+ * Validate magic bytes from an in-memory buffer (cloud storage mode).
+ * @param {Buffer} fileBuffer - The complete file buffer from multer memoryStorage
+ * @returns {boolean} True if the buffer starts with valid JPEG or PNG magic bytes
+ */
+const validateMagicBytesFromBuffer = (fileBuffer) => {
+    if (!fileBuffer || fileBuffer.length < 4) return false;
+    return checkMagicBytesFromBuffer(fileBuffer);
+};
+
+/**
+ * Post-upload middleware that verifies files are real JPEG/PNG images.
+ *
+ * - LOCAL mode:  reads magic bytes from the saved file on disk.
+ *                Deletes the file if validation fails.
+ * - CLOUD mode:  reads magic bytes from the in-memory buffer.
+ *                No disk cleanup needed (nothing was written).
  */
 const validateUploadedFiles = async (req, res, next) => {
     const files = req.files || (req.file ? [req.file] : []);
@@ -183,30 +229,38 @@ const validateUploadedFiles = async (req, res, next) => {
 
     for (const file of files) {
         try {
-            const isValid = await validateMagicBytes(file.path);
+            // Choose validation strategy based on storage mode
+            const isValid = IS_CLOUD_STORAGE
+                ? validateMagicBytesFromBuffer(file.buffer)
+                : await validateMagicBytes(file.path);
 
             if (!isValid) {
-                // Delete the invalid file from disk
-                try {
-                    await fs.promises.unlink(file.path);
-                } catch (unlinkErr) {
-                    logger.warn(`Failed to delete invalid upload: ${file.path}`, {
-                        error: unlinkErr.message,
-                    });
+                // Disk mode: delete the invalid file from disk
+                if (!IS_CLOUD_STORAGE) {
+                    try {
+                        await fs.promises.unlink(file.path);
+                    } catch (unlinkErr) {
+                        logger.warn(`Failed to delete invalid upload: ${file.path}`, {
+                            error: unlinkErr.message,
+                        });
+                    }
                 }
 
                 logger.warn('File upload rejected: invalid magic bytes (not a real image)', {
                     userId: req.user ? req.user.id : 'unknown',
                     originalName: file.originalname,
-                    savedAs: file.filename,
+                    savedAs: file.filename || '(memory)',
+                    storageMode: IS_CLOUD_STORAGE ? 'cloud' : 'local',
                 });
 
-                // Delete ALL files from this batch (atomic rejection)
-                for (const f of files) {
-                    if (f.path !== file.path) {
-                        try {
-                            await fs.promises.unlink(f.path);
-                        } catch (_) { /* already deleted or missing */ }
+                // Disk mode: delete ALL remaining files from this batch (atomic rejection)
+                if (!IS_CLOUD_STORAGE) {
+                    for (const f of files) {
+                        if (f.path && f.path !== file.path) {
+                            try {
+                                await fs.promises.unlink(f.path);
+                            } catch (_) { /* already deleted or missing */ }
+                        }
                     }
                 }
 
@@ -218,7 +272,7 @@ const validateUploadedFiles = async (req, res, next) => {
                 );
             }
         } catch (err) {
-            logger.error(`Magic byte validation error for ${file.path}`, {
+            logger.error(`Magic byte validation error for ${file.path || file.originalname}`, {
                 error: err.message,
             });
             return next(
@@ -227,7 +281,7 @@ const validateUploadedFiles = async (req, res, next) => {
         }
     }
 
-    logger.info(`Magic byte validation passed for ${files.length} file(s)`);
+    logger.info(`Magic byte validation passed for ${files.length} file(s) [${IS_CLOUD_STORAGE ? 'cloud' : 'local'} mode]`);
     next();
 };
 
@@ -245,12 +299,13 @@ const upload = multer({
 
 /**
  * Middleware chain for MRI file upload:
- *   1. Multer — extension + MIME validation, save to disk
- *   2. validateUploadedFiles — magic byte verification
+ *   1. Multer — extension + MIME validation, save to disk or memory
+ *   2. validateUploadedFiles — magic byte verification (disk or buffer)
  *
  * Accepts up to 4 files. Field name: 'mriFiles'
  */
 const uploadMRI = [upload.array('mriFiles', 4), validateUploadedFiles];
 
-module.exports = { uploadMRI, UPLOAD_DIR };
+logger.info(`Upload middleware initialized [storage: ${IS_CLOUD_STORAGE ? 'cloudinary (memory)' : 'local (disk)'}]`);
 
+module.exports = { uploadMRI, UPLOAD_DIR, IS_CLOUD_STORAGE };
