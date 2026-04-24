@@ -635,7 +635,7 @@ export default function Results() {
                                                 className="w-full h-full object-cover"
                                                 onError={(e) => {
                                                     e.target.onerror = null;
-                                                    e.target.src = "https://via.placeholder.com/48?text=MRI";
+                                                    e.target.src = "/mri-placeholder.png";
                                                 }}
                                             />
                                         </div>
