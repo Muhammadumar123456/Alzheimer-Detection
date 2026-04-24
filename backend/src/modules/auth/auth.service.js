@@ -220,6 +220,9 @@ exports.resetPassword = async (email, otp, newPassword) => {
  */
 exports.findOrCreateGoogleUser = async (profile) => {
     const { id: googleId, emails, displayName } = profile;
+    if (!emails || emails.length === 0) {
+        throw new AppError('Google account does not have an associated email address.', 400);
+    }
     const email = emails[0].value;
 
     // 1. Check if user exists with this Google ID

@@ -44,7 +44,10 @@ router.get('/google', passport.authenticate('google', {
 }));
 
 router.get('/google/callback',
-    passport.authenticate('google', { session: false, failureRedirect: '/login' }),
+    passport.authenticate('google', { 
+        session: false, 
+        failureRedirect: `${process.env.CORS_ORIGIN || 'http://localhost:5173'}/login?error=auth_failed` 
+    }),
     async (req, res) => {
         try {
             const { user, token } = await authService.findOrCreateGoogleUser(req.user);
