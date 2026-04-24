@@ -14,7 +14,15 @@ const dotenv = require('dotenv');
 const path = require('path');
 
 // Load .env file from backend root
-dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
+const envPath = path.join(__dirname, '..', '..', '.env');
+console.log('[DEBUG] Loading .env from:', envPath);
+const result = dotenv.config({ path: envPath });
+
+if (result.error) {
+    console.error('[DEBUG] Failed to load .env file:', result.error.message);
+} else {
+    console.log('[DEBUG] .env file loaded successfully');
+}
 
 // =========================================================================
 // ENVIRONMENT VARIABLE VALIDATION (WITH DEFAULTS)
@@ -94,9 +102,9 @@ const config = {
     },
     // --- Google OAuth ---
     google: {
-        clientId: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        apiBaseUrl: process.env.API_BASE_URL,
+        clientId: (process.env.GOOGLE_CLIENT_ID || '').trim(),
+        clientSecret: (process.env.GOOGLE_CLIENT_SECRET || '').trim(),
+        apiBaseUrl: (process.env.API_BASE_URL || '').trim(),
     },
     // --- Redis & Async ---
     redis: {
@@ -109,6 +117,7 @@ const config = {
     queue: {
         jobTimeout: parseInt(process.env.JOB_TIMEOUT, 10) || 60000, // 60s
         attempts: parseInt(process.env.JOB_ATTEMPTS, 10) || 3,
+        backoffDelay: parseInt(process.env.JOB_BACKOFF_DELAY, 10) || 1000, // 1s
     },
 };
 

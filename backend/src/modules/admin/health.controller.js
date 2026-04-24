@@ -31,7 +31,9 @@ exports.getGeneralHealth = asyncHandler(async (req, res) => {
         latencyMs: Date.now() - start,
         services: {
             database: dbStatus,
-            memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB'
+            memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+            asyncMode: config.useAsync ? 'enabled' : 'disabled',
+            safeMode: config.safeMode ? 'on' : 'off'
         }
     };
 

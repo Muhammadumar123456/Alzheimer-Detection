@@ -28,7 +28,7 @@ if (config.useAsync) {
             timeout: config.queue.jobTimeout, 
             backoff: {
                 type: 'exponential',
-                delay: 1000,
+                delay: config.queue.backoffDelay,
             },
             removeOnComplete: {
                 age: 24 * 3600, // keep for 1 day
