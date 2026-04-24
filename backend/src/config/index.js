@@ -67,7 +67,7 @@ if (storageType === 'cloudinary') {
     const apiKey = (process.env.CLOUDINARY_API_KEY || '').trim();
     const apiSecret = (process.env.CLOUDINARY_API_SECRET || '').trim();
     if (!cloudName || !apiKey || !apiSecret) {
-        console.warn('⚠️  WARNING: STORAGE_TYPE is "cloudinary" but Cloudinary credentials are missing. Uploads will fail.');
+        throw new Error('FATAL: STORAGE_TYPE is "cloudinary" but Cloudinary credentials (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) are missing.');
     }
 }
 
