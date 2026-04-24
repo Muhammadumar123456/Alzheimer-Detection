@@ -105,14 +105,14 @@ class MLService:
             compile=False,
             custom_objects={"AttentionPooling": AttentionPooling},
         )
-        logger.info("MRI attention model loaded ✔")
+        logger.info("MRI attention model loaded ")
 
         # 2. Build a feature extractor from layer -4 (must match training)
         feature_layer = self._attention_model.get_layer(index=FEATURE_LAYER_INDEX).output
         self._feature_extractor = Model(
             self._attention_model.input, feature_layer
         )
-        logger.info("Feature extractor built ✔")
+        logger.info("Feature extractor built ")
 
         # 3. Load the fusion model
         logger.info(f"Loading fusion model from: {FUSION_MODEL_PATH}")
@@ -120,7 +120,7 @@ class MLService:
             FUSION_MODEL_PATH,
             compile=False,
         )
-        logger.info("Fusion model loaded ✔")
+        logger.info("Fusion model loaded ")
 
         self.is_ready = True
 
@@ -143,7 +143,7 @@ class MLService:
         self._feature_extractor.predict(dummy_image, verbose=0)
         features = self._feature_extractor.predict(dummy_image, verbose=0)
         self._fusion_model.predict([features, dummy_cog], verbose=0)
-        logger.info("Model warm-up complete ✔")
+        logger.info("Model warm-up complete ")
 
     # ------------------------------------------------------------------
     # IMAGE PREPROCESSING
@@ -213,3 +213,4 @@ class MLService:
             "confidence": round(confidence, 6),
             "class_probabilities": class_probabilities,
         }
+    
