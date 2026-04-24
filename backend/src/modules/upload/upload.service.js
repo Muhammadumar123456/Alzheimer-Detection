@@ -16,16 +16,17 @@ const { paginateQuery } = require('../../utils/paginate');
 
 /**
  * Save MRI upload metadata to the database
- * @param {object} data - { userId, fileName, filePath, fileSize, mimeType }
+ * @param {object} data - { userId, fileName, filePath, fileSize, mimeType, storageType }
  * @returns {Promise<object>} Created MRI document
  */
-exports.saveMRIRecord = async ({ userId, fileName, filePath, fileSize, mimeType }) => {
+exports.saveMRIRecord = async ({ userId, fileName, filePath, fileSize, mimeType, storageType = 'local' }) => {
     // ------------------------------------------------------------------
-    // PRODUCTION HARDENING: Store relative paths, not absolute.
-    // This ensures the DB remains portable across different environments.
+    // PRODUCTION HARDENING: Store relative paths for local storage,
+    // or full URLs for cloud storage.
     // ------------------------------------------------------------------
     let standardizedPath = filePath;
-    if (path.isAbsolute(filePath)) {
+    
+    if (storageType === 'local' && path.isAbsolute(filePath)) {
         // Calculate path relative to the backend root directory
         const backendRoot = path.join(__dirname, '..', '..');
         standardizedPath = path.relative(backendRoot, filePath);
@@ -37,7 +38,7 @@ exports.saveMRIRecord = async ({ userId, fileName, filePath, fileSize, mimeType 
         filePath: standardizedPath,
         fileSize,
         mimeType,
-        storageType: 'local',
+        storageType,
     });
 
     logger.info(`MRI metadata saved: ${fileName} (${(fileSize / 1024).toFixed(2)} KB)`);
