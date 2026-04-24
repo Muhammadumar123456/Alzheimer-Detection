@@ -1,9 +1,13 @@
 /**
  * =============================================================================
- * UPLOAD SERVICE (MRI File Management)
+ * UPLOAD SERVICE (MRI File Management — Dual Storage)
  * =============================================================================
  * Business logic for MRI file upload, listing, retrieval, and deletion.
  * Handles metadata persistence and physical file management.
+ *
+ * Supports dual storage modes:
+ *   - local:      files on disk (existing behavior)
+ *   - cloudinary:  files in Cloudinary CDN (placeholder — not yet wired)
  * =============================================================================
  */
 
@@ -13,6 +17,36 @@ const MRI = require('./mri.model');
 const AppError = require('../../utils/AppError');
 const logger = require('../../config/logger');
 const { paginateQuery } = require('../../utils/paginate');
+
+// =========================================================================
+// CLOUD STORAGE PLACEHOLDERS (to be implemented in future Cloudinary task)
+// =========================================================================
+
+/**
+ * Placeholder: Upload a file buffer to Cloudinary.
+ * Will be replaced with actual cloudinary.v2.uploader.upload_stream() call.
+ *
+ * @param {Buffer} fileBuffer - The file buffer from multer memoryStorage
+ * @param {string} fileName - Original file name for reference
+ * @returns {Promise<{ url: string, publicId: string }>} Cloud file metadata
+ */
+exports.uploadToCloud = async (fileBuffer, fileName) => {
+    // TODO: Implement Cloudinary upload in future task
+    logger.warn(`Cloud upload called but not yet implemented. File: ${fileName}`);
+    throw new AppError('Cloud storage (Cloudinary) is not yet configured. Set STORAGE_TYPE=local.', 501);
+};
+
+/**
+ * Placeholder: Delete a file from Cloudinary by its URL/public ID.
+ * Will be replaced with actual cloudinary.v2.uploader.destroy() call.
+ *
+ * @param {string} filePath - The Cloudinary URL or public ID
+ * @returns {Promise<void>}
+ */
+const deleteFromCloud = async (filePath) => {
+    // TODO: Implement Cloudinary deletion in future task
+    logger.warn(`Cloud delete not yet implemented. Skipping deletion of: ${filePath}`);
+};
 
 /**
  * Save MRI upload metadata to the database
@@ -95,14 +129,19 @@ exports.deleteMRI = async (mriId, userId) => {
         throw new AppError('You are not authorized to delete this file', 403);
     }
 
-    // Delete physical file from disk
-    try {
-        const absolutePath = path.resolve(__dirname, '..', '..', mri.filePath);
-        await fs.unlink(absolutePath);
-        logger.info(`Physical MRI file deleted: ${mri.filePath}`);
-    } catch (err) {
-        // File may already be missing — log but don't fail
-        logger.warn(`Could not delete physical file: ${mri.filePath} — ${err.message}`);
+    // Delete file (disk or cloud based on storage type)
+    if (mri.storageType === 'cloudinary') {
+        await deleteFromCloud(mri.filePath);
+    } else {
+        // Local mode: delete physical file from disk
+        try {
+            const absolutePath = path.resolve(__dirname, '..', '..', mri.filePath);
+            await fs.unlink(absolutePath);
+            logger.info(`Physical MRI file deleted: ${mri.filePath}`);
+        } catch (err) {
+            // File may already be missing — log but don't fail
+            logger.warn(`Could not delete physical file: ${mri.filePath} — ${err.message}`);
+        }
     }
 
     // Delete database record
@@ -121,13 +160,17 @@ exports.deleteMRI = async (mriId, userId) => {
 exports.deleteAllMRIsByUser = async (userId) => {
     const mris = await MRI.find({ user: userId });
 
-    // Delete physical files
+    // Delete files (disk or cloud based on each record's storage type)
     for (const mri of mris) {
-        try {
-            const absolutePath = path.resolve(__dirname, '..', '..', mri.filePath);
-            await fs.unlink(absolutePath);
-        } catch (err) {
-            logger.warn(`Could not delete physical file: ${mri.filePath} — ${err.message}`);
+        if (mri.storageType === 'cloudinary') {
+            await deleteFromCloud(mri.filePath);
+        } else {
+            try {
+                const absolutePath = path.resolve(__dirname, '..', '..', mri.filePath);
+                await fs.unlink(absolutePath);
+            } catch (err) {
+                logger.warn(`Could not delete physical file: ${mri.filePath} — ${err.message}`);
+            }
         }
     }
 

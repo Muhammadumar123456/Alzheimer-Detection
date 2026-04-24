@@ -47,7 +47,7 @@ app.use(
                 defaultSrc: ["'self'"],
                 scriptSrc: ["'self'"],
                 styleSrc: ["'self'", "'unsafe-inline'"],
-                imgSrc: ["'self'", 'data:', 'blob:'],
+                imgSrc: ["'self'", 'data:', 'blob:', 'res.cloudinary.com'],
                 connectSrc: ["'self'"],
                 fontSrc: ["'self'"],
                 objectSrc: ["'none'"],
@@ -114,7 +114,13 @@ app.use(passport.initialize());
 const googleClientId = config.google.clientId;
 const googleClientSecret = config.google.clientSecret;
 
-if (googleClientId && googleClientSecret && googleClientId !== 'YOUR_GOOGLE_CLIENT_ID') {
+// DEBUG LOGS (Remove after fix)
+console.log('[DEBUG] Google Client ID detected:', googleClientId ? `Exists (${googleClientId.substring(0, 10)}...)` : 'MISSING');
+console.log('[DEBUG] Google Client Secret detected:', googleClientSecret ? 'Exists' : 'MISSING');
+
+if (googleClientId && googleClientSecret && 
+    googleClientId !== 'YOUR_GOOGLE_CLIENT_ID' && 
+    googleClientId !== 'REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID') {
     passport.use(
         new GoogleStrategy(
             {
@@ -138,7 +144,7 @@ if (googleClientId && googleClientSecret && googleClientId !== 'YOUR_GOOGLE_CLIE
         callbackURL: 'placeholder'
     }, () => {}));
     
-    logger.warn('Google OAuth not fully configured. Users will see config error at runtime.');
+    logger.warn(`Google OAuth not fully configured. ID: ${googleClientId}, Secret: ${googleClientSecret ? 'SET' : 'NOT SET'}`);
 }
 
 passport.serializeUser((user, done) => done(null, user));

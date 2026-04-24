@@ -10,6 +10,7 @@
 const uploadService = require('./upload.service');
 const asyncHandler = require('../../utils/asyncHandler');
 const { sendSuccess, sendPaginated } = require('../../utils/responseHelper');
+const { uploadMRI: uploadMRIChain, IS_CLOUD_STORAGE } = require('../../middleware/upload');
 const AppError = require('../../utils/AppError');
 const { parsePaginationParams } = require('../../utils/paginate');
 
@@ -28,13 +29,32 @@ exports.uploadMRI = asyncHandler(async (req, res) => {
     // Save each file as a separate MRI record
     const savedFiles = [];
     for (const file of files) {
-        const mriRecord = await uploadService.saveMRIRecord({
-            userId: req.user.id,
-            fileName: file.filename,
-            filePath: file.path,
-            fileSize: file.size,
-            mimeType: file.mimetype,
-        });
+        let mriRecord;
+
+        if (IS_CLOUD_STORAGE) {
+            // CLOUD MODE: file.buffer exists instead of file.path
+            const cloudData = await uploadService.uploadToCloud(file.buffer, file.originalname);
+            
+            mriRecord = await uploadService.saveMRIRecord({
+                userId: req.user.id,
+                fileName: file.originalname,
+                filePath: cloudData.url, // Full Cloudinary URL
+                fileSize: file.size,
+                mimeType: file.mimetype,
+                storageType: 'cloudinary',
+            });
+        } else {
+            // LOCAL MODE: file.path exists (existing behavior)
+            mriRecord = await uploadService.saveMRIRecord({
+                userId: req.user.id,
+                fileName: file.filename,
+                filePath: file.path,
+                fileSize: file.size,
+                mimeType: file.mimetype,
+                storageType: 'local',
+            });
+        }
+
         savedFiles.push({
             id: mriRecord._id,
             fileName: mriRecord.fileName,
