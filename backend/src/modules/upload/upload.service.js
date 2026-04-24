@@ -78,6 +78,7 @@ const deleteFromCloud = async (publicId) => {
     if (!publicId) return;
 
     try {
+        logger.info(`Initiating Cloudinary asset deletion: ${publicId}`);
         const result = await cloudinary.uploader.destroy(publicId);
         if (result.result === 'ok') {
             logger.info(`Cloudinary asset deleted: ${publicId}`);
