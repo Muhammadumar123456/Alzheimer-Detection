@@ -21,6 +21,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminInquiries from "./pages/admin/AdminInquiries";
+import UserInquiries from "./pages/UserInquiries";
 
 function App() {
   return (
@@ -42,12 +44,14 @@ function App() {
               <Route path="/cognitive-test" element={<ProtectedRoute><AppLayout><CognitiveTest /></AppLayout></ProtectedRoute>} />
               <Route path="/results" element={<ProtectedRoute><AppLayout><Results /></AppLayout></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><AppLayout><Profile /></AppLayout></ProtectedRoute>} />
+              <Route path="/inquiries" element={<ProtectedRoute><AppLayout><UserInquiries /></AppLayout></ProtectedRoute>} />
 
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminRoute><AdminLayout><AdminDashboard /></AdminLayout></AdminRoute>} />
               <Route path="/admin/users" element={<AdminRoute><AdminLayout><AdminUsers /></AdminLayout></AdminRoute>} />
               <Route path="/admin/reports" element={<AdminRoute><AdminLayout><AdminReports /></AdminLayout></AdminRoute>} />
               <Route path="/admin/analytics" element={<AdminRoute><AdminLayout><AdminAnalytics /></AdminLayout></AdminRoute>} />
+              <Route path="/admin/inquiries" element={<AdminRoute><AdminLayout><AdminInquiries /></AdminLayout></AdminRoute>} />
 
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />

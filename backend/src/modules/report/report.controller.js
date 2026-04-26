@@ -22,7 +22,7 @@ exports.getMyReport = asyncHandler(async (req, res) => {
 });
 
 /**
- * Generate report for a specific user (admin/clinician only)
+ * Generate report for a specific user (admin only)
  * GET /api/report/user/:userId
  */
 exports.getReportByUserId = asyncHandler(async (req, res) => {

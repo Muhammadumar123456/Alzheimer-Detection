@@ -21,12 +21,15 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
     BarChart3, Brain, Upload, Loader2, AlertCircle, RefreshCw, Home,
-    Activity, FileText, AlertTriangle, Cpu, Clock, Zap
+    Activity, FileText, AlertTriangle, Cpu, Clock, Zap, Download, ChevronRight, X
 } from "lucide-react";
 import { apiGet } from "../utils/api";
+import { useToast } from "../context/ToastContext";
 import { DiagnosisCard, ConfidenceMeter, ProbabilityChart, CLASS_META } from "../components/results";
 
 // ─── Recommendation presets mapped to ML prediction classes ─────────────────
@@ -86,15 +89,162 @@ function getCognitiveRisk(percentage) {
 export default function Results() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { showToast } = useToast();
 
     const immediateState = location.state || null;
 
     // ── State ────────────────────────────────────────────────────────────
-    const [mlResults, setMlResults] = useState([]);
+    const [mlResults, setMlResults] = useState(immediateState?.prediction ? [immediateState.prediction] : []);
     const [cognitiveTests, setCognitiveTests] = useState([]);
     const [mriUploads, setMriUploads] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    // Modal States
+    const [selectedCase, setSelectedCase] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // ── Case Detail Functions ──────────────────────────────────────────
+    const handleViewDetails = (result) => {
+        setSelectedCase(result);
+        setIsModalOpen(true);
+    };
+
+    const getFileUrl = (file) => {
+        if (!file || !file.fileUrl) return "/mri-placeholder.png";
+        if (file.fileUrl.startsWith('http')) return file.fileUrl;
+        const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/api\/?$/, '');
+        return `${baseUrl}${file.fileUrl}`;
+    };
+
+    const loadImageAsBase64 = (url) => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL("image/jpeg"));
+            };
+            img.onerror = () => resolve(null);
+            img.src = url;
+        });
+    };
+
+    const handleDownloadIndividualReport = async (result) => {
+        try {
+            const { user, mriScan, cognitiveTest, prediction, confidence, createdAt, details } = result;
+            const doc = new jsPDF();
+            
+            // 1. Header & Title
+            doc.setFillColor(30, 41, 59); // Slate-900
+            doc.rect(0, 0, 210, 40, 'F');
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(22);
+            doc.setFont("helvetica", "bold");
+            doc.text("ALZDETECT DIAGNOSTIC REPORT", 20, 25);
+            
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, 32);
+
+            // 2. Patient Information Section
+            doc.setTextColor(30, 41, 59);
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text("Patient Information", 20, 55);
+            
+            autoTable(doc, {
+                startY: 60,
+                head: [['Field', 'Detail']],
+                body: [
+                    ['Patient Name', user?.name || 'N/A'],
+                    ['Patient Email', user?.email || 'N/A'],
+                    ['Case Reference', result._id.slice(-8).toUpperCase()],
+                    ['Assessment Date', new Date(createdAt).toLocaleDateString()],
+                ],
+                theme: 'striped',
+                headStyles: { fillColor: [79, 70, 229] }, // Indigo-600
+            });
+
+            // 3. AI Diagnostic Results
+            let currentY = doc.lastAutoTable.finalY + 15;
+            doc.setFontSize(14);
+            doc.text("AI Diagnostic Results", 20, currentY);
+            
+            autoTable(doc, {
+                startY: currentY + 5,
+                head: [['Metric', 'Value']],
+                body: [
+                    ['AI Prediction', CLASS_META[prediction]?.label || prediction],
+                    ['Model Confidence', `${Math.round((confidence || 0) * 100)}%`],
+                    ['Analysis Status', 'Verified'],
+                    ['Notes', typeof details === 'string' ? details : 'No clinical notes provided.'],
+                ],
+                theme: 'grid',
+                headStyles: { fillColor: [79, 70, 229] },
+            });
+
+            // 4. MRI Visualization (If exists)
+            currentY = doc.lastAutoTable.finalY + 15;
+            if (mriScan && mriScan.fileUrl) {
+                doc.setFontSize(14);
+                doc.text("Clinical MRI Scan", 20, currentY);
+                
+                const imageUrl = getFileUrl(mriScan);
+                if (imageUrl && !imageUrl.includes('placeholder')) {
+                    const base64Img = await loadImageAsBase64(imageUrl);
+                    if (base64Img) {
+                        doc.addImage(base64Img, 'JPEG', 20, currentY + 5, 100, 70);
+                        currentY += 80;
+                    } else {
+                        doc.setFontSize(10);
+                        doc.setTextColor(150);
+                        doc.text("[MRI Image not available for preview]", 20, currentY + 10);
+                        currentY += 15;
+                    }
+                }
+            }
+
+            // 5. Cognitive Performance Breakdown
+            if (cognitiveTest) {
+                if (currentY > 240) { doc.addPage(); currentY = 20; }
+                doc.setTextColor(30, 41, 59);
+                doc.setFontSize(14);
+                doc.text("Cognitive Performance Breakdown", 20, currentY);
+                
+                autoTable(doc, {
+                    startY: currentY + 5,
+                    head: [['Domain', 'Score (%)', 'Status']],
+                    body: [
+                        ['Memory Performance', `${cognitiveTest.memoryScore}%`, cognitiveTest.memoryScore >= 60 ? 'Stable' : 'Impaired'],
+                        ['Language Performance', `${cognitiveTest.languageScore}%`, cognitiveTest.languageScore >= 60 ? 'Stable' : 'Impaired'],
+                        ['Attention Performance', `${cognitiveTest.attentionScore}%`, cognitiveTest.attentionScore >= 60 ? 'Satisfactory' : 'Impaired'],
+                        ['Total Symptom Count', `${cognitiveTest.totalScore != null ? cognitiveTest.totalScore : (30 - cognitiveTest.mmseScore)}/30`, (cognitiveTest.totalScore || (30 - cognitiveTest.mmseScore)) > 15 ? 'High Risk' : 'Low Risk'],
+                    ],
+                    theme: 'striped',
+                    headStyles: { fillColor: [147, 51, 234] }, // Purple-600
+                });
+            }
+
+            // 6. Footer Disclaimer
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            doc.text("DISCLAIMER: This is an educational project report generated by AlzDetect AI. It is NOT a professional medical diagnosis.", 20, 285);
+
+            const patientName = (user?.name || 'Patient').replace(/\s+/g, '_');
+            const dateStr = new Date(createdAt).toISOString().split('T')[0];
+            const fileName = `Report_${prediction}_${patientName}_${dateStr}.pdf`;
+            doc.save(fileName);
+            if (typeof showToast === 'function') showToast('Report downloaded successfully', 'success');
+        } catch (err) {
+            console.error("PDF Export Error Details:", err);
+            if (typeof showToast === 'function') showToast(`Failed to generate PDF: ${err.message || 'Unknown error'}`, 'error');
+        }
+    };
 
     // ── Data Fetching ────────────────────────────────────────────────────
     const fetchData = useCallback(async () => {
@@ -117,12 +267,7 @@ export default function Results() {
             setCognitiveTests(cogRes.data?.tests || []);
             setMriUploads(mriRes.data?.files || []);
 
-            // Route protection: no data at all and no immediate state
-            const tests = cogRes.data?.tests || [];
-            if (!immediateState && tests.length === 0) {
-                navigate("/cognitive-test", { replace: true });
-                return;
-            }
+            // Route protection logic removed to allow viewing empty results page
         } catch (err) {
             if (import.meta.env.DEV) {
                 console.error("[Results] Failed to fetch data:", err);
@@ -137,23 +282,28 @@ export default function Results() {
         fetchData();
     }, [fetchData]);
 
-    // ── Derived ML prediction (prefer API data, fallback to nav state) ──
+    // ── Derived ML prediction (prefer matching API data, fallback to nav state) ──
     const activePrediction = useMemo(() => {
-        // 1. Try to match from API results by cognitiveTestId
-        if (immediateState?.cognitiveTestId && mlResults.length > 0) {
-            const match = mlResults.find(
-                (r) =>
-                    (r.cognitiveTest?._id || r.cognitiveTest) === immediateState.cognitiveTestId
+        // 1. If we have a specific test ID from navigation, only look for that match
+        if (immediateState?.cognitiveTestId) {
+            // Check API results for this specific test
+            const apiMatch = mlResults.find(
+                (r) => (r.cognitiveTest?._id || r.cognitiveTest) === immediateState.cognitiveTestId
             );
-            if (match) return match;
+            if (apiMatch) return apiMatch;
+
+            // Check navigation state (from immediate submission)
+            if (immediateState.prediction) {
+                return immediateState.prediction;
+            }
+
+            // CRITICAL FIX: If we just submitted a test and NO prediction is linked to it,
+            // we MUST return null to show the cognitive-only risk level.
+            // DO NOT fall through to step 2 (latest global result).
+            return null;
         }
 
-        // 2. Navigation state prediction (from auto-predict)
-        if (immediateState?.prediction) {
-            return immediateState.prediction;
-        }
-
-        // 3. Latest result from API
+        // 2. If no immediateState (page refresh/direct visit), show latest global result
         if (mlResults.length > 0) {
             return mlResults[0];
         }
@@ -196,11 +346,21 @@ export default function Results() {
         if (activePrediction?.prediction) {
             return RECOMMENDATIONS[activePrediction.prediction] || RECOMMENDATIONS.CN;
         }
-        // Fallback to cognitive-only risk tier
+        // Fallback to cognitive-only risk tier (NO 'AD' label here)
         if (percentage !== null) {
             if (percentage >= 80) return RECOMMENDATIONS.CN;
             if (percentage >= 60) return RECOMMENDATIONS.EMCI;
-            return RECOMMENDATIONS.AD;
+            
+            // For very low scores without MRI, we use a generic but serious warning
+            return {
+                title: "Cognitive Assessment: Clinical Review Required",
+                items: [
+                    "Your assessment score indicates significant cognitive symptoms.",
+                    "Consult a healthcare professional for a formal clinical evaluation.",
+                    "Consider uploading an MRI scan for AI-powered multimodal analysis.",
+                    "Keep a log of memory or behavioral changes to share with your doctor.",
+                ],
+            };
         }
         return null;
     }, [activePrediction, percentage]);
@@ -469,10 +629,12 @@ export default function Results() {
                     transition={{ delay: 0.35 }}
                     className="bg-white shadow-xl rounded-2xl p-6 sm:p-8"
                 >
-                    <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        <Cpu className="w-6 h-6 text-indigo-600" />
-                        AI Prediction History
-                    </h3>
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <Cpu className="w-6 h-6 text-indigo-600" />
+                            AI Prediction History
+                        </h3>
+                    </div>
                     <div className="space-y-3">
                         {mlResults.map((result) => {
                             const meta = CLASS_META[result.prediction] || CLASS_META.CN;
@@ -482,39 +644,61 @@ export default function Results() {
                             return (
                                 <div
                                     key={result._id}
-                                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border ${meta.colors.border} ${meta.colors.bg}`}
+                                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer group ${meta.colors.border} ${meta.colors.bg}`}
+                                    onClick={() => handleViewDetails(result)}
                                 >
-                                    <div className="flex items-center gap-3 mb-2 sm:mb-0">
-                                        <div className={`p-2 rounded-lg ${meta.colors.iconBg}`}>
-                                            <Icon className={`w-5 h-5 ${meta.colors.iconColor}`} />
+                                    <div className="flex items-center gap-4 mb-3 sm:mb-0">
+                                        <div className={`p-2.5 rounded-xl transition-transform group-hover:scale-110 ${meta.colors.iconBg}`}>
+                                            <Icon className={`w-6 h-6 ${meta.colors.iconColor}`} />
                                         </div>
                                         <div>
-                                            <p className="font-semibold text-gray-800">
-                                                {meta.label}
-                                            </p>
-                                            <p className="text-sm text-gray-500">
-                                                {new Date(result.createdAt).toLocaleDateString()} at{" "}
-                                                {new Date(result.createdAt).toLocaleTimeString([], {
-                                                    hour: "2-digit",
-                                                    minute: "2-digit",
-                                                })}
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-bold text-gray-900 leading-none">
+                                                    {meta.label}
+                                                </p>
+                                                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-tighter ${meta.colors.badge}`}>
+                                                    {result.prediction}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                {new Date(result.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(result.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4 ml-12 sm:ml-0">
-                                        <div className="text-right">
-                                            <span className={`text-sm font-bold ${meta.colors.text}`}>
-                                                {pct}% confidence
-                                            </span>
+
+                                    <div className="flex items-center gap-6">
+                                        {/* Status Badges */}
+                                        <div className="hidden md:flex items-center gap-2">
+                                            <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold ${result.mriScan ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>
+                                                <Upload size={10} /> MRI
+                                            </div>
+                                            <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold ${result.cognitiveTest ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-400'}`}>
+                                                <Brain size={10} /> COG
+                                            </div>
+                                        </div>
+
+                                        <div className="text-right min-w-[100px]">
+                                            <p className={`text-sm font-black ${meta.colors.text}`}>
+                                                {pct}% <span className="text-[10px] font-bold opacity-70">CONFIDENCE</span>
+                                            </p>
                                             {result.cognitiveTest?.totalScore != null && (
-                                                <p className="text-xs text-gray-500">
+                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
                                                     Symptoms: {result.cognitiveTest.totalScore}/30
                                                 </p>
                                             )}
                                         </div>
-                                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${meta.colors.badge}`}>
-                                            {result.prediction}
-                                        </span>
+
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDownloadIndividualReport(result);
+                                            }}
+                                            title="Download Clinical Report"
+                                            className="p-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm active:scale-90"
+                                        >
+                                            <Download size={18} />
+                                        </button>
+                                        <ChevronRight size={18} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
                                     </div>
                                 </div>
                             );
@@ -630,7 +814,7 @@ export default function Results() {
                                     {file.fileUrl ? (
                                         <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 flex-shrink-0">
                                             <img
-                                                src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${file.fileUrl}`}
+                                                src={getFileUrl(file)}
                                                 alt="MRI Thumbnail"
                                                 className="w-full h-full object-cover"
                                                 onError={(e) => {
@@ -694,6 +878,166 @@ export default function Results() {
                     <RefreshCw className="w-5 h-5" /> New Diagnosis
                 </motion.button>
             </div>
+
+            {/* ═══════════════════════════════════════════════════════════════
+                REPORT MODAL
+               ═══════════════════════════════════════════════════════════════ */}
+            <AnimatePresence>
+                {isModalOpen && selectedCase && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsModalOpen(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div 
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="bg-white rounded-3xl shadow-2xl overflow-hidden max-w-2xl w-full relative z-10 max-h-[90vh] flex flex-col"
+                        >
+                            {/* Modal Header */}
+                            <div className="px-8 py-6 bg-slate-900 text-white flex items-center justify-between sticky top-0 z-20">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-indigo-500/20 rounded-xl border border-indigo-500/30">
+                                        <FileText size={20} className="text-indigo-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold">Case Detail View</h3>
+                                        <p className="text-xs text-indigo-300 font-medium tracking-wider uppercase">
+                                            ID: {selectedCase._id.slice(-8)} · {new Date(selectedCase.createdAt).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Modal Content */}
+                            <div className="p-8 overflow-y-auto custom-scrollbar bg-gray-50/30">
+                                <div className="space-y-8">
+                                    {/* MRI Section */}
+                                    <section>
+                                        <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                            <Activity size={16} className="text-blue-600" />
+                                            Clinical MRI Data
+                                        </h4>
+                                        {selectedCase.mriScan ? (
+                                            <div className="relative group rounded-2xl overflow-hidden border-2 border-gray-100 bg-black aspect-video flex items-center justify-center">
+                                                <img 
+                                                    src={getFileUrl(selectedCase.mriScan)}
+                                                    alt="MRI Scan"
+                                                    className="max-w-full max-h-full object-contain"
+                                                />
+                                                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                                                    <p className="text-white text-xs font-bold truncate">
+                                                        {selectedCase.mriScan.fileName}
+                                                    </p>
+                                                    <p className="text-gray-300 text-[10px]">
+                                                        Uploaded on {new Date(selectedCase.mriScan.uploadedAt).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="p-12 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400">
+                                                <Upload size={32} className="mb-2 opacity-20" />
+                                                <p className="text-sm font-medium">No MRI scan associated with this record</p>
+                                            </div>
+                                        )}
+                                    </section>
+
+                                    {/* Diagnostic Results */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className={`p-5 rounded-2xl border-2 ${CLASS_META[selectedCase.prediction]?.colors.border || 'border-gray-100'} ${CLASS_META[selectedCase.prediction]?.colors.bg || 'bg-white'}`}>
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">AI Prediction</label>
+                                            <p className={`text-2xl font-black ${CLASS_META[selectedCase.prediction]?.colors.text || 'text-gray-900'}`}>
+                                                {CLASS_META[selectedCase.prediction]?.label || selectedCase.prediction}
+                                            </p>
+                                        </div>
+                                        <div className="p-5 bg-white rounded-2xl border-2 border-gray-100">
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Model Confidence</label>
+                                            <p className="text-2xl font-black text-gray-900">
+                                                {Math.round((selectedCase.confidence || 0) * 100)}%
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Cognitive Breakdown */}
+                                    <section>
+                                        <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                            <Brain size={16} className="text-purple-600" />
+                                            Cognitive Performance
+                                        </h4>
+                                        {selectedCase.cognitiveTest ? (
+                                            <div className="bg-white p-6 rounded-2xl border-2 border-gray-100 space-y-6">
+                                                <div className="flex justify-between items-end">
+                                                    <div>
+                                                        <p className="text-xs font-bold text-gray-400 uppercase">Total Symptom Count</p>
+                                                        <p className="text-xl font-bold text-rose-600">
+                                                            {selectedCase.cognitiveTest.totalScore != null ? selectedCase.cognitiveTest.totalScore : (30 - selectedCase.cognitiveTest.mmseScore)}/30
+                                                        </p>
+                                                        <p className="text-[10px] text-gray-400 font-medium">Higher score indicates higher risk</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-[10px] font-bold text-gray-400 uppercase">Assessment Date</p>
+                                                        <p className="text-sm font-bold text-gray-900">
+                                                            {new Date(selectedCase.cognitiveTest.submittedAt).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    {[
+                                                        { label: "Memory", val: selectedCase.cognitiveTest.memoryScore, color: "purple" },
+                                                        { label: "Language", val: selectedCase.cognitiveTest.languageScore, color: "indigo" },
+                                                        { label: "Attention", val: selectedCase.cognitiveTest.attentionScore, color: "blue" }
+                                                    ].map(d => (
+                                                        <div key={d.label} className="text-center">
+                                                            <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden mb-2">
+                                                                <div 
+                                                                    className={`h-full bg-${d.color}-500 rounded-full`} 
+                                                                    style={{ width: `${d.val}%` }}
+                                                                />
+                                                            </div>
+                                                            <p className="text-[10px] font-bold text-gray-400 uppercase">{d.label}</p>
+                                                            <p className="text-sm font-bold text-gray-900">{d.val}%</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="p-8 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 text-center text-gray-400">
+                                                <p className="text-sm font-medium">No cognitive data for this assessment</p>
+                                            </div>
+                                        )}
+                                    </section>
+                                </div>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="p-6 border-t border-gray-100 bg-white flex gap-4 sticky bottom-0 z-20">
+                                <button 
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="flex-1 py-4 px-6 bg-gray-100 text-gray-700 font-bold rounded-2xl hover:bg-gray-200 transition-colors"
+                                >
+                                    Close
+                                </button>
+                                <button 
+                                    onClick={() => handleDownloadIndividualReport(selectedCase)}
+                                    className="flex-1 py-4 px-6 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-shadow shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                >
+                                    <Download size={18} /> Download Case File
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

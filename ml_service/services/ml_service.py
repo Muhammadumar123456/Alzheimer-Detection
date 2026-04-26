@@ -179,38 +179,42 @@ class MLService:
         if not self.is_ready:
             raise RuntimeError("Models are not loaded.")
 
-        # 1. Preprocess MRI image
-        img_tensor = self._preprocess_image(image_bytes)
+        try:
+            # 1. Preprocess MRI image
+            img_tensor = self._preprocess_image(image_bytes)
 
-        # 2. Extract MRI features
-        mri_features = self._feature_extractor.predict(img_tensor, verbose=0)
+            # 2. Extract MRI features
+            mri_features = self._feature_extractor.predict(img_tensor, verbose=0)
 
-        # 3. Build cognitive feature vector
-        cog_vector = np.array(cognitive_answers, dtype=np.float32).reshape(1, -1)
+            # 3. Build cognitive feature vector
+            cog_vector = np.array(cognitive_answers, dtype=np.float32).reshape(1, -1)
 
-        # 4. Fusion model prediction
-        preds = self._fusion_model.predict([mri_features, cog_vector], verbose=0)
-        probs = preds[0]  # shape: (4,)
+            # 4. Fusion model prediction
+            preds = self._fusion_model.predict([mri_features, cog_vector], verbose=0)
+            probs = preds[0]  # shape: (4,)
 
-        # 5. Interpret results
-        predicted_idx = int(np.argmax(probs))
-        predicted_class = CLASSES[predicted_idx]
-        confidence = float(probs[predicted_idx])
+            # 5. Interpret results
+            predicted_idx = int(np.argmax(probs))
+            predicted_class = CLASSES[predicted_idx]
+            confidence = float(probs[predicted_idx])
 
-        class_probabilities = {
-            cls: round(float(probs[i]), 6)
-            for i, cls in enumerate(CLASSES)
-        }
+            class_probabilities = {
+                cls: round(float(probs[i]), 6)
+                for i, cls in enumerate(CLASSES)
+            }
 
-        logger.info(
-            f"Prediction: {predicted_class} | "
-            f"Confidence: {confidence:.4f} | "
-            f"Probabilities: {class_probabilities}"
-        )
+            logger.info(
+                f"Prediction: {predicted_class} | "
+                f"Confidence: {confidence:.4f} | "
+                f"Probabilities: {class_probabilities}"
+            )
 
-        return {
-            "prediction": predicted_class,
-            "confidence": round(confidence, 6),
-            "class_probabilities": class_probabilities,
-        }
+            return {
+                "prediction": predicted_class,
+                "confidence": round(confidence, 6),
+                "class_probabilities": class_probabilities,
+            }
+        except Exception as e:
+            logger.error(f"Prediction error: {str(e)}", exc_info=True)
+            raise e
     

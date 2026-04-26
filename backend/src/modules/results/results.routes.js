@@ -5,7 +5,7 @@
  * Route definitions for ML prediction results.
  * All routes are protected — require a valid JWT.
  * /my         — patients access their own data
- * /user/:userId — admin/clinician access specific user data
+ * /user/:userId — admin access specific user data
  * =============================================================================
  */
 
@@ -23,10 +23,10 @@ router.use(protect);
 /**
  * POST /api/results           — Store a new prediction result
  * GET  /api/results/my        — Get own prediction results (any authenticated user)
- * GET  /api/results/user/:userId — Get specific user's results (admin/clinician only)
+ * GET  /api/results/user/:userId — Get specific user's results (admin only)
  */
 router.post('/', validate(schemas.storePrediction), resultsController.storePrediction);
 router.get('/my', resultsController.getMyResults);
-router.get('/user/:userId', authorize('admin', 'clinician'), resultsController.getResultsByUserId);
+router.get('/user/:userId', authorize('admin'), resultsController.getResultsByUserId);
 
 module.exports = router;

@@ -46,8 +46,14 @@ exports.updateResult = async (resultId, updateData) => {
         throw new AppError('Prediction result not found for update.', 404);
     }
 
-    logger.info(`Prediction updated: ${resultId} (status: ${result.status})`);
-    return result;
+    const populated = await result.populate([
+        { path: 'user', select: 'name email' },
+        { path: 'mriScan', select: 'fileName uploadedAt filePath storageType' },
+        { path: 'cognitiveTest', select: 'rawAnswers totalScore mmseScore mocaScore memoryScore languageScore attentionScore submittedAt' },
+    ]);
+
+    logger.info(`Prediction updated and populated: ${resultId} (status: ${result.status})`);
+    return populated;
 };
 
 /**
@@ -82,11 +88,17 @@ exports.storePrediction = async (data) => {
         details,
     });
 
+    const populated = await result.populate([
+        { path: 'user', select: 'name email' },
+        { path: 'mriScan', select: 'fileName uploadedAt filePath storageType' },
+        { path: 'cognitiveTest', select: 'rawAnswers totalScore mmseScore mocaScore memoryScore languageScore attentionScore submittedAt' },
+    ]);
+
     logger.info(
-        `Prediction stored: ${prediction} (confidence: ${confidence}, status: ${result.status}) for user ${userId}`
+        `Prediction stored and populated: ${prediction} (confidence: ${confidence}, status: ${result.status}) for user ${userId}`
     );
 
-    return result;
+    return populated;
 };
 
 /**
@@ -104,7 +116,7 @@ exports.getResultsByUser = async (userId, paginationParams) => {
         {
             populate: [
                 { path: 'user', select: 'name email' },
-                { path: 'mriScan', select: 'fileName uploadedAt' },
+                { path: 'mriScan', select: 'fileName uploadedAt filePath storageType' },
                 { path: 'cognitiveTest', select: 'rawAnswers totalScore mmseScore mocaScore memoryScore languageScore attentionScore submittedAt' },
             ],
         }

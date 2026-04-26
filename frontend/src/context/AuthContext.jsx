@@ -107,6 +107,13 @@ export const AuthProvider = ({ children }) => {
         clearAuth();
     }, [clearAuth]);
 
+    // UPDATE USER DATA
+    const updateUser = useCallback((newData) => {
+        const updatedUser = { ...user, ...newData };
+        localStorage.setItem('authUser', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+    }, [user]);
+
     const value = {
         user,
         isAuthenticated,
@@ -115,6 +122,7 @@ export const AuthProvider = ({ children }) => {
         signup,
         logout,
         loginWithToken,
+        updateUser,
     };
 
     if (loading) {

@@ -173,10 +173,16 @@ const schemas = {
     },
 
     resetPassword: {
-        token: {
+        email: {
             required: true,
             type: 'string',
-            label: 'Reset Token',
+            match: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+            label: 'Email',
+        },
+        otp: {
+            required: true,
+            type: 'string',
+            label: 'Reset OTP',
         },
         newPassword: {
             required: true,
@@ -184,6 +190,60 @@ const schemas = {
             minLength: 8,
             passwordMatch: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?~`])/,
             label: 'New Password',
+        },
+    },
+
+    adminCreateUser: {
+        name: {
+            required: true,
+            type: 'string',
+            match: /^[a-zA-Z\s]+$/,
+            minLength: 2,
+            maxLength: 50,
+            label: 'Name',
+        },
+        email: {
+            required: true,
+            type: 'string',
+            // match should include domain restrictions if we want to be strict, 
+            // but let's at least match the standard format and let Mongoose handle the domain for now 
+            // OR update the regex to be more restrictive.
+            // For now, I'll just add the passwordMatch.
+            match: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+            label: 'Email',
+        },
+        role: {
+            required: true,
+            type: 'string',
+            label: 'Role',
+        },
+        password: {
+            required: true,
+            type: 'string',
+            minLength: 8,
+            passwordMatch: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?~`])/,
+            label: 'Password',
+        },
+    },
+
+    adminUpdateUser: {
+        name: {
+            required: false,
+            type: 'string',
+            minLength: 2,
+            maxLength: 50,
+            label: 'Name',
+        },
+        email: {
+            required: false,
+            type: 'string',
+            match: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+            label: 'Email',
+        },
+        role: {
+            required: false,
+            type: 'string',
+            label: 'Role',
         },
     },
 };
@@ -288,7 +348,8 @@ const validate = (schema) => {
         }
 
         if (errors.length > 0) {
-            return sendError(res, 400, 'Validation failed', errors);
+            // Return the first error message as the primary message for better UX
+            return sendError(res, 400, errors[0].message, errors);
         }
 
         next();

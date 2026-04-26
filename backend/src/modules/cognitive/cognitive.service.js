@@ -82,67 +82,36 @@ exports.submitTest = async (userId, testData) => {
         logger.info(`MRI Scan ID detected (${mriUploadId}). Triggering auto-prediction for user ${userId}`);
         const Result = require('../results/results.model');
 
-        // Duplicate guard: check if a prediction already exists for this pair
-        const existingResult = await Result.findOne({
-            mriScan: mriUploadId,
-            cognitiveTest: cognitiveTest._id,
-            status: { $in: ['completed', 'pending'] },
-        }).populate('cognitiveTest');
+        try {
+            // Duplicate guard
+            const existingResult = await Result.findOne({
+                mriScan: mriUploadId,
+                cognitiveTest: cognitiveTest._id,
+                status: { $in: ['completed', 'pending'] },
+            }).populate('cognitiveTest');
 
-        if (existingResult) {
-            logger.info(`Skipping auto-prediction — result already exists (${existingResult._id}, status: ${existingResult.status})`);
-            predictionResult = existingResult;
-        } else {
-            let isQueued = false;
-
-            // ASYNC PATH (BullMQ)
-            if (config.useAsync) {
-                try {
-                    const resultsService = require('../results/results.service');
-                    const predictionQueue = require('../../queues/prediction.queue');
-
-                    // 1. Create a pending result record
-                    predictionResult = await resultsService.initiateResult({
-                        userId,
-                        mriScanId: mriUploadId,
-                        cognitiveTestId: cognitiveTest._id,
-                    });
-
-                    // 2. Dispatch job to queue
-                    await predictionQueue.add('analyze-alzheimer', {
-                        mriScanId: mriUploadId,
-                        cognitiveTestId: cognitiveTest._id,
-                        userId,
-                        resultId: predictionResult._id,
-                    });
-
-                    logger.info(`Auto-prediction job queued for test ${cognitiveTest._id}`);
-                    isQueued = true;
-                } catch (queueErr) {
-                    logger.error(`Queue dispatch failed for test ${cognitiveTest._id}, falling back to sync: ${queueErr.message}`);
-                }
+            if (existingResult) {
+                logger.info(`Skipping auto-prediction — result already exists (${existingResult._id})`);
+                predictionResult = existingResult;
+            } else {
+                logger.info(`Running prediction sync for MRI ${mriUploadId} and test ${cognitiveTest._id}`);
+                predictionResult = await predictionService.runPrediction({
+                    mriScanId: mriUploadId,
+                    cognitiveTestId: cognitiveTest._id,
+                    userId,
+                });
+                logger.info(`Auto-prediction successful for test ${cognitiveTest._id}`);
             }
-
-            // SYNC PATH (Direct Call or Fallback)
-            if (!isQueued) {
-                try {
-                    predictionResult = await predictionService.runPrediction({
-                        mriScanId: mriUploadId,
-                        cognitiveTestId: cognitiveTest._id,
-                        userId,
-                    });
-                    logger.info(`Auto-prediction successful (Sync) for test ${cognitiveTest._id}`);
-                } catch (err) {
-                    // Log but don't fail the request — the cognitive test is already saved!
-                    logger.error(`Auto-prediction failed for test ${cognitiveTest._id}: ${err.message}`, {
-                        error: err.stack,
-                        userId,
-                        mriUploadId,
-                    });
-                }
-            }
+        } catch (err) {
+            logger.error(`Auto-prediction flow failed for test ${cognitiveTest._id}: ${err.message}`, {
+                error: err.stack,
+                userId,
+                mriUploadId,
+            });
+            // We still return the cognitive test so the user sees something
         }
-    } else {
+    }
+ else {
         logger.info(`No MRI Scan ID provided. Skipping auto-prediction for test ${cognitiveTest._id}`);
     }
 

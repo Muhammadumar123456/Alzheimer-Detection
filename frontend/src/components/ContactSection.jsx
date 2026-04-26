@@ -1,17 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, Send, MapPin, Loader2, CheckCircle2 } from 'lucide-react';
 import { apiPost } from '../utils/api';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function ContactSection() {
     const { showToast } = useToast();
+    const { user, isAuthenticated } = useAuth();
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         subject: '',
         message: ''
     });
+
+    // Auto-fill user data if logged in
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            setFormData(prev => ({
+                ...prev,
+                name: user.name || '',
+                email: user.email || ''
+            }));
+        }
+    }, [isAuthenticated, user]);
     const [loading, setLoading] = useState(false);
     const [submitted, setSubmitted] = useState(false);
 
@@ -62,7 +75,8 @@ export default function ContactSection() {
                                 </div>
                                 <div>
                                     <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-1">Email Support</p>
-                                    <p className="text-lg font-medium">Muhammadumr012@gmail.com</p>
+                                    <p className="text-lg font-medium leading-tight">haiderdurab@gmail.com</p>
+                                    <p className="text-lg font-medium leading-tight">muhammadumr012@gmail.com</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-6">
@@ -71,7 +85,8 @@ export default function ContactSection() {
                                 </div>
                                 <div>
                                     <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-1">Phone Inquiry</p>
-                                    <p className="text-lg font-medium">+92 3105689027</p>
+                                    <p className="text-lg font-medium leading-tight">+92 310-5689027</p>
+                                    <p className="text-lg font-medium leading-tight">+92 309-5180478</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-6">
@@ -93,12 +108,12 @@ export default function ContactSection() {
                         <div className="grid md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Your Name</label>
-                                <input type="text" name="name" required value={formData.name} onChange={handleChange} placeholder="John Doe"
+                                <input type="text" name="name" required value={formData.name} onChange={handleChange} placeholder="Your Name"
                                     className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none text-sm font-medium" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Email Address</label>
-                                <input type="email" name="email" required value={formData.email} onChange={handleChange} placeholder="john@example.com"
+                                <input type="email" name="email" required value={formData.email} onChange={handleChange} placeholder="youremail@gmail.com"
                                     className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none text-sm font-medium" />
                             </div>
                         </div>

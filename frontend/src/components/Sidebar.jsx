@@ -11,7 +11,8 @@ import {
   BarChart3,
   LogOut,
   User,
-  LogIn
+  LogIn,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -27,7 +28,9 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', delay: 0.35 },
     { icon: Upload, label: 'Upload MRI', path: '/upload-mri', delay: 0.4 },
     { icon: Brain, label: 'Cognitive Test', path: '/cognitive-test', delay: 0.45 },
-    { icon: BarChart3, label: 'View Results', path: '/results', delay: 0.5 }
+    { icon: BarChart3, label: 'View Results', path: '/results', delay: 0.5 },
+    { icon: User, label: 'Profile', path: '/profile', delay: 0.55 },
+    { icon: MessageSquare, label: 'My Inquiries', path: '/inquiries', delay: 0.6 }
   ];
 
   const handleNavigation = (path) => {

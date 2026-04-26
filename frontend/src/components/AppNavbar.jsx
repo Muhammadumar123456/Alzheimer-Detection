@@ -11,7 +11,7 @@ const navLinks = [
     { label: 'Results', path: '/results', icon: BarChart3 },
 ];
 
-export default function AppNavbar() {
+export default function AppNavbar({ isSidebarOpen, setIsSidebarOpen }) {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout } = useAuth();
@@ -32,13 +32,25 @@ export default function AppNavbar() {
         <nav className="bg-white/80 backdrop-blur-xl border-b border-gray-200/60 sticky top-0 z-50 shadow-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
-                    {/* Logo */}
-                    <motion.div className="flex items-center gap-2.5 cursor-pointer" whileHover={{ scale: 1.03 }} onClick={() => handleNav('/home')}>
-                        <div className="p-1.5 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg">
-                            <Brain className="w-5 h-5 text-white" />
-                        </div>
-                        <span className="text-lg font-bold bg-gradient-to-r from-purple-700 to-indigo-600 bg-clip-text text-transparent">AlzDetect</span>
-                    </motion.div>
+                    {/* LEFT SIDE: Logo + Sidebar Trigger */}
+                    <div className="flex items-center gap-4">
+                        <motion.div className="flex items-center gap-2.5 cursor-pointer" whileHover={{ scale: 1.03 }} onClick={() => handleNav('/home')}>
+                            <div className="p-1.5 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg">
+                                <Brain className="w-5 h-5 text-white" />
+                            </div>
+                            <span className="text-lg font-bold bg-gradient-to-r from-purple-700 to-indigo-600 bg-clip-text text-transparent">AlzDetect</span>
+                        </motion.div>
+
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                            className="hidden lg:flex items-center justify-center p-2 bg-slate-100 text-slate-600 rounded-lg font-bold text-sm hover:bg-slate-200 transition-colors border border-slate-200"
+                            title="Toggle Navigation"
+                        >
+                            <Menu size={20} />
+                        </motion.button>
+                    </div>
 
                     {/* Desktop Nav */}
                     <div className="hidden md:flex items-center gap-1">
@@ -69,9 +81,18 @@ export default function AppNavbar() {
                     </div>
 
                     {/* Mobile Toggle */}
-                    <button className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors" onClick={() => setMobileOpen(!mobileOpen)}>
-                        {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                    </button>
+                    <div className="md:hidden flex items-center gap-2">
+                        <button
+                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
+                            title="Open Sidebar"
+                        >
+                            <Menu className="w-5 h-5" />
+                        </button>
+                        <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200" onClick={() => setMobileOpen(!mobileOpen)}>
+                            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                        </button>
+                    </div>
                 </div>
             </div>
 

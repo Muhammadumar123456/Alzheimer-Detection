@@ -67,12 +67,26 @@ const mriSchema = new mongoose.Schema(
  */
 mriSchema.virtual('fileUrl').get(function () {
     if (this.storageType === 'local') {
-        // Returns e.g. /uploads/mri/123-timestamp-image.jpg
-        // The app must serve the 'uploads' folder statically at /uploads
-        return `/${this.filePath.replace(/\\/g, '/')}`;
+        const normalized = this.filePath.replace(/\\/g, '/');
+        // Extract everything from 'uploads/' onwards to fix old absolute paths saved in the database
+        const uploadsIndex = normalized.indexOf('uploads/');
+        if (uploadsIndex !== -1) {
+            return `/${normalized.substring(uploadsIndex)}`;
+        }
+        return `/${normalized}`;
     }
     // For cloud storage, filePath would be the full URL
     return this.filePath;
+});
+
+/**
+ * Virtual to link to the AI prediction result for this MRI
+ */
+mriSchema.virtual('result', {
+    ref: 'Result',
+    localField: '_id',
+    foreignField: 'mriScan',
+    justOne: true
 });
 
 const MRI = mongoose.model('MRI', mriSchema);

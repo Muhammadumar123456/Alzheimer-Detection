@@ -5,7 +5,7 @@
  * Route definitions for report generation.
  * All routes are protected — require a valid JWT.
  * /my         — patients access their own report
- * /user/:userId — admin/clinician access specific user report
+ * /user/:userId — admin access specific user report
  * =============================================================================
  */
 
@@ -21,9 +21,9 @@ router.use(protect);
 
 /**
  * GET /api/report/my            — Generate own aggregated report (any authenticated user)
- * GET /api/report/user/:userId  — Generate report for specific user (admin/clinician only)
+ * GET /api/report/user/:userId  — Generate report for specific user (admin only)
  */
 router.get('/my', reportController.getMyReport);
-router.get('/user/:userId', authorize('admin', 'clinician'), reportController.getReportByUserId);
+router.get('/user/:userId', authorize('admin'), reportController.getReportByUserId);
 
 module.exports = router;

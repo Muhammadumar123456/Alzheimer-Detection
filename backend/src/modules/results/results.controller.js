@@ -42,7 +42,7 @@ exports.getMyResults = asyncHandler(async (req, res) => {
 });
 
 /**
- * Get prediction results for a specific user (admin/clinician only) — paginated
+ * Get prediction results for a specific user (admin only) — paginated
  * GET /api/results/user/:userId
  */
 exports.getResultsByUserId = asyncHandler(async (req, res) => {

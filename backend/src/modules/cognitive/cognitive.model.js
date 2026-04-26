@@ -94,6 +94,16 @@ const cognitiveTestSchema = new mongoose.Schema(
     }
 );
 
+/**
+ * Virtual to link to the AI prediction result for this test
+ */
+cognitiveTestSchema.virtual('result', {
+    ref: 'Result',
+    localField: '_id',
+    foreignField: 'cognitiveTest',
+    justOne: true
+});
+
 const CognitiveTest = mongoose.model('CognitiveTest', cognitiveTestSchema);
 
 module.exports = CognitiveTest;

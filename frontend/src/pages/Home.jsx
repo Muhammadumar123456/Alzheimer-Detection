@@ -15,8 +15,15 @@ import { Brain, Upload, BarChart3, Activity } from 'lucide-react';
 
 export default function Home() {
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    // Prevent Admin from staying on landing page
+    React.useEffect(() => {
+        if (isAuthenticated && user?.role === 'admin') {
+            navigate('/admin', { replace: true });
+        }
+    }, [isAuthenticated, user, navigate]);
 
     const handleNavigation = (path) => {
         if (['/upload-mri', '/cognitive-test', '/results', '/dashboard'].includes(path)) {

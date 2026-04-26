@@ -16,6 +16,8 @@ export default function Login() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    const toastShownRef = React.useRef(false);
+
     // Handle OAuth Callback / Redirect logic
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -23,18 +25,28 @@ export default function Login() {
         const userDataStr = params.get('user');
         const oauthError = params.get('error');
 
-        if (token && userDataStr) {
+        if (token && userDataStr && !toastShownRef.current) {
             try {
                 const userData = JSON.parse(decodeURIComponent(userDataStr));
                 loginWithToken(userData, token);
-                showToast("Successfully logged in with Google!", "success");
-                navigate("/dashboard");
+                showToast("Login successful!", "success");
+                toastShownRef.current = true;
+                
+                // Clear URL params
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+                if (userData.role === 'admin') {
+                    navigate("/admin");
+                } else {
+                    navigate("/dashboard");
+                }
             } catch (err) {
                 showToast("Failed to process Google login", "error");
             }
-        } else if (oauthError) {
+        } else if (oauthError && !toastShownRef.current) {
             setError(decodeURIComponent(oauthError));
             showToast("Google authentication failed", "error");
+            toastShownRef.current = true;
         }
     }, [location, loginWithToken, navigate, showToast]);
 
@@ -43,9 +55,16 @@ export default function Login() {
         setError("");
         setLoading(true);
         try {
-            await login(email, password);
-            showToast("Welcome back!", "success");
-            navigate("/dashboard");
+            const result = await login(email, password);
+            if (!toastShownRef.current) {
+                showToast("Login successful!", "success");
+                toastShownRef.current = true;
+            }
+            if (result.user.role === 'admin') {
+                navigate("/admin");
+            } else {
+                navigate("/dashboard");
+            }
         } catch (err) {
             setError(err.message || "Invalid credentials. Please try again.");
         } finally {
@@ -54,7 +73,9 @@ export default function Login() {
     }
 
     const handleGoogleLogin = () => {
-        const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'; 
+        // Remove trailing /api if present to avoid double /api/api
+        const rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const backendBaseUrl = rawUrl.replace(/\/api\/?$/, '');
         window.location.href = `${backendBaseUrl}/api/auth/google`;
     };
 

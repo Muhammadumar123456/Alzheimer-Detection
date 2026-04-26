@@ -36,7 +36,7 @@ exports.getMyTests = asyncHandler(async (req, res) => {
 });
 
 /**
- * Get cognitive tests for a specific user (admin/clinician only) — paginated
+ * Get cognitive tests for a specific user (admin only) — paginated
  * GET /api/cognitive/user/:userId
  */
 exports.getTestsByUserId = asyncHandler(async (req, res) => {

@@ -9,6 +9,12 @@ Handles model lifecycle, health checks, and prediction routing.
 
 import time
 import logging
+import os
+
+# Suppress TensorFlow logging and oneDNN messages
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
@@ -157,3 +163,7 @@ async def predict(
         class_probabilities=result["class_probabilities"],
         processing_time_ms=elapsed_ms,
     )
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

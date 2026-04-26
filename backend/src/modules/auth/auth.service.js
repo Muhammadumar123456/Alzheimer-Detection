@@ -16,7 +16,7 @@ const logger = require('../../config/logger');
 /**
  * Generate a JWT token for a user
  * @param {string} userId - Mongoose User ID
- * @param {string} role - User role (patient/clinician/admin)
+ * @param {string} role - User role (patient/admin)
  * @returns {string} JWT Token
  */
 const signToken = (userId, role) => {
@@ -137,7 +137,7 @@ exports.changePassword = async (userId, currentPassword, newPassword) => {
 
     // 3. Set new password (pre-save hook will hash it)
     user.passwordHash = newPassword;
-    await user.save();
+    await user.save({ validateBeforeSave: false });
 };
 
 /**
@@ -198,7 +198,7 @@ exports.resetPassword = async (email, otp, newPassword) => {
     user.passwordHash = newPassword;
     user.passwordResetOTP = undefined;
     user.passwordResetOTPExpires = undefined;
-    await user.save();
+    await user.save({ validateBeforeSave: false });
 
     // 3. Generate new JWT
     const jwtToken = signToken(user._id, user.role);

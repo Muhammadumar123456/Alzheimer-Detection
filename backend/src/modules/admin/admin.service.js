@@ -33,6 +33,59 @@ exports.listUsers = async (paginationParams) => {
 };
 
 /**
+ * Create a new user manually (Admin only)
+ */
+exports.createUser = async (userData) => {
+    const { name, email, role, password } = userData;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+        throw new AppError('A user with this email already exists', 409);
+    }
+
+    // Create user
+    const newUser = await User.create({
+        name,
+        email,
+        role,
+        passwordHash: password, // Map 'password' from request to 'passwordHash' for the model
+    });
+
+    // Remove password from response
+    newUser.password = undefined;
+
+    return newUser;
+};
+
+/**
+ * Update user details (Admin only)
+ */
+exports.updateUser = async (userId, updateData) => {
+    const { name, email, role } = updateData;
+
+    // If email is being updated, check if it's already taken
+    if (email) {
+        const existingUser = await User.findOne({ email, _id: { $ne: userId } });
+        if (existingUser) {
+            throw new AppError('Email is already in use by another account', 409);
+        }
+    }
+
+    const user = await User.findByIdAndUpdate(
+        userId,
+        { name, email, role },
+        { new: true, runValidators: true }
+    ).select('-password -__v');
+
+    if (!user) {
+        throw new AppError('User not found', 404);
+    }
+
+    return user;
+};
+
+/**
  * Remove a user and cascade-delete all related data
  */
 exports.removeUser = async (userId, adminId) => {
@@ -118,26 +171,36 @@ exports.getDashboardStats = async () => {
  * Get all reports (MRI + Cognitive tests across all users)
  */
 exports.getAllReports = async (paginationParams) => {
-    // Get cognitive tests with user info
+    // Get cognitive tests with user info and linked results
     const cognitiveTests = await CognitiveTest.find()
         .sort({ submittedAt: -1 })
         .limit(50)
         .populate('user', 'name email')
-        .select('mmseScore mocaScore memoryScore languageScore attentionScore submittedAt');
+        .populate({
+            path: 'result',
+            select: 'prediction confidence'
+        })
+        .select('mmseScore mocaScore memoryScore languageScore attentionScore submittedAt result');
 
-    // Get MRI uploads with user info
+    // Get MRI uploads with full info and linked results
     const mriUploads = await MRI.find()
         .sort({ uploadedAt: -1 })
         .limit(50)
         .populate('user', 'name email')
-        .select('fileName uploadedAt');
+        .populate({
+            path: 'result',
+            select: 'prediction confidence'
+        })
+        .select('fileName filePath storageType fileSize mimeType uploadedAt result');
 
-    // Get predictions with user info
+    // Get predictions with full related info
     const predictions = await Result.find()
         .sort({ createdAt: -1 })
         .limit(50)
         .populate('user', 'name email')
-        .select('prediction confidence modelVersion createdAt');
+        .populate('mriScan', 'fileName filePath storageType fileSize mimeType')
+        .populate('cognitiveTest', 'mmseScore totalScore memoryScore attentionScore languageScore')
+        .select('prediction confidence modelVersion processingTimeMs createdAt mriScan cognitiveTest classProbabilities');
 
     return { cognitiveTests, mriUploads, predictions };
 };
@@ -145,13 +208,27 @@ exports.getAllReports = async (paginationParams) => {
 /**
  * Get analytics data for charts
  */
-exports.getAnalytics = async () => {
-    // User registrations over time (last 12 months)
-    const twelveMonthsAgo = new Date();
-    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+exports.getAnalytics = async (range = '12m') => {
+    // Calculate date filter based on range
+    const startDate = new Date();
+    let dateFilter = {};
 
+    if (range === '3m') {
+        startDate.setMonth(startDate.getMonth() - 3);
+        dateFilter = { createdAt: { $gte: startDate } };
+    } else if (range === '6m') {
+        startDate.setMonth(startDate.getMonth() - 6);
+        dateFilter = { createdAt: { $gte: startDate } };
+    } else if (range === '12m') {
+        startDate.setMonth(startDate.getMonth() - 12);
+        dateFilter = { createdAt: { $gte: startDate } };
+    } else if (range === 'all') {
+        dateFilter = {}; // No filter for all time
+    }
+
+    // User registrations over time
     const userRegistrations = await User.aggregate([
-        { $match: { createdAt: { $gte: twelveMonthsAgo } } },
+        { $match: dateFilter },
         {
             $group: {
                 _id: {
@@ -164,8 +241,11 @@ exports.getAnalytics = async () => {
         { $sort: { '_id.year': 1, '_id.month': 1 } },
     ]);
 
+    const submittedDateFilter = range === 'all' ? {} : { submittedAt: { $gte: startDate } };
+
     // Predictions by type
     const predictionsByType = await Result.aggregate([
+        { $match: dateFilter },
         {
             $group: {
                 _id: '$prediction',
@@ -176,14 +256,20 @@ exports.getAnalytics = async () => {
 
     // Cognitive test score distribution
     const scoreDistribution = await CognitiveTest.aggregate([
+        { $match: submittedDateFilter },
+        {
+            $project: {
+                effectiveScore: { $ifNull: ['$totalScore', '$mmseScore'] }
+            }
+        },
         {
             $group: {
                 _id: {
                     $switch: {
                         branches: [
-                            { case: { $gte: ['$mmseScore', 24] }, then: 'Normal (24-30)' },
-                            { case: { $gte: ['$mmseScore', 18] }, then: 'Mild (18-23)' },
-                            { case: { $gte: ['$mmseScore', 10] }, then: 'Moderate (10-17)' },
+                            { case: { $gte: ['$effectiveScore', 24] }, then: 'Normal (24-30)' },
+                            { case: { $gte: ['$effectiveScore', 18] }, then: 'Mild (18-23)' },
+                            { case: { $gte: ['$effectiveScore', 10] }, then: 'Moderate (10-17)' },
                         ],
                         default: 'Severe (0-9)',
                     },
@@ -193,27 +279,13 @@ exports.getAnalytics = async () => {
         },
     ]);
 
-    // Monthly tests counts
-    const monthlyTests = await CognitiveTest.aggregate([
-        { $match: { submittedAt: { $gte: twelveMonthsAgo } } },
-        {
-            $group: {
-                _id: {
-                    year: { $year: '$submittedAt' },
-                    month: { $month: '$submittedAt' },
-                },
-                count: { $sum: 1 },
-            },
-        },
-        { $sort: { '_id.year': 1, '_id.month': 1 } },
-    ]);
-
     // Average cognitive scores
     const avgScores = await CognitiveTest.aggregate([
+        { $match: submittedDateFilter },
         {
             $group: {
                 _id: null,
-                avgMMSE: { $avg: '$mmseScore' },
+                avgMMSE: { $avg: { $ifNull: ['$totalScore', '$mmseScore'] } },
                 avgMoCA: { $avg: '$mocaScore' },
                 avgMemory: { $avg: '$memoryScore' },
                 avgLanguage: { $avg: '$languageScore' },
@@ -222,23 +294,22 @@ exports.getAnalytics = async () => {
         },
     ]);
 
+    // Sort order for ranges to keep chart logical
+    const rangeOrder = { 'Normal (24-30)': 4, 'Mild (18-23)': 3, 'Moderate (10-17)': 2, 'Severe (0-9)': 1 };
+
     return {
         userRegistrations: userRegistrations.map((r) => ({
-            month: `${r._id.year}-${String(r._id.month).padStart(2, '0')}`,
+            month: new Date(r._id.year, r._id.month - 1).toLocaleString('default', { month: 'short', year: '2-digit' }),
             count: r.count,
         })),
         predictionsByType: predictionsByType.map((p) => ({
-            type: p._id,
+            type: p._id || 'Pending',
             count: p.count,
-        })),
+        })).sort((a, b) => b.count - a.count),
         scoreDistribution: scoreDistribution.map((s) => ({
             range: s._id,
             count: s.count,
-        })),
-        monthlyTests: monthlyTests.map((t) => ({
-            month: `${t._id.year}-${String(t._id.month).padStart(2, '0')}`,
-            count: t.count,
-        })),
+        })).sort((a, b) => rangeOrder[b.range] - rangeOrder[a.range]),
         averageScores: avgScores[0] || {
             avgMMSE: 0,
             avgMoCA: 0,

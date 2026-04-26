@@ -27,6 +27,30 @@ exports.listUsers = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Create a new user manually
+ * POST /api/admin/user
+ */
+exports.createUser = asyncHandler(async (req, res) => {
+    const newUser = await adminService.createUser(req.body);
+
+    logger.info(`Admin ${req.user.email} created a new user: ${newUser.email}`);
+
+    sendSuccess(res, 201, 'User created successfully', { user: newUser });
+});
+
+/**
+ * Update an existing user's details
+ * PATCH /api/admin/user/:userId
+ */
+exports.updateUser = asyncHandler(async (req, res) => {
+    const updatedUser = await adminService.updateUser(req.params.userId, req.body);
+
+    logger.info(`Admin ${req.user.email} updated user: ${updatedUser.email} (ID: ${req.params.userId})`);
+
+    sendSuccess(res, 200, 'User updated successfully', { user: updatedUser });
+});
+
+/**
  * Remove a user by ID (with cascade deletion)
  * DELETE /api/admin/user/:userId
  */
@@ -67,9 +91,10 @@ exports.getAllReports = asyncHandler(async (req, res) => {
  * GET /api/admin/analytics
  */
 exports.getAnalytics = asyncHandler(async (req, res) => {
-    const analytics = await adminService.getAnalytics();
+    const { range } = req.query;
+    const analytics = await adminService.getAnalytics(range);
 
-    logger.info(`Admin ${req.user.email} viewed analytics`);
+    logger.info(`Admin ${req.user.email} viewed analytics (range: ${range || 'default'})`);
 
     sendSuccess(res, 200, 'Analytics retrieved successfully', { analytics });
 });

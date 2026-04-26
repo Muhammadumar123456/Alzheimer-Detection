@@ -91,13 +91,15 @@ exports.predict = async (mriRecord, cognitiveAnswers) => {
             return response.data;
         };
     } else {
-        // LOCAL MODE: filePath is a relative disk path (existing behavior)
-        const mriFilePath = path.resolve(mriRecord.filePath);
+        // LOCAL MODE: filePath is stored as a relative path from the backend root
+        // __dirname is backend/src/utils. We need to go up 2 levels to reach backend/
+        const mriFilePath = path.join(__dirname, '..', '..', mriRecord.filePath);
 
         // Safety check for file
         try {
             await fs.promises.access(mriFilePath, fs.constants.R_OK);
         } catch {
+            logger.error(`MRI file not found at: ${mriFilePath} (Original path: ${mriRecord.filePath})`);
             throw new AppError('MRI scan file not found on disk.', 404);
         }
 

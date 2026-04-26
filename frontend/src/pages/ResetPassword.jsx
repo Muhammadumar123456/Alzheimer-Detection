@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Eye, EyeOff, Loader2, CheckCircle2, ShieldCheck, Mail, Hash } from 'lucide-react';
+import { Lock, Eye, EyeOff, Loader2, CheckCircle2, ShieldCheck, Mail, Hash, CheckCircle } from 'lucide-react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { apiPost } from '../utils/api';
 import { useToast } from '../context/ToastContext';
@@ -19,6 +19,33 @@ export default function ResetPassword() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
+
+    const [passwordRequirements, setPasswordRequirements] = useState({
+        length: false,
+        uppercase: false,
+        lowercase: false,
+        number: false,
+        special: false
+    });
+
+    const checkPassword = (val) => {
+        setPassword(val);
+        setPasswordRequirements({
+            length: val.length >= 8,
+            uppercase: /[A-Z]/.test(val),
+            lowercase: /[a-z]/.test(val),
+            number: /[0-9]/.test(val),
+            special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?~`]/.test(val)
+        });
+    };
+
+    const requirements = [
+        { label: '8+ Characters', met: passwordRequirements.length },
+        { label: 'Uppercase Letter', met: passwordRequirements.uppercase },
+        { label: 'Lowercase Letter', met: passwordRequirements.lowercase },
+        { label: 'Number', met: passwordRequirements.number },
+        { label: 'Special Character', met: passwordRequirements.special },
+    ];
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -52,7 +79,11 @@ export default function ResetPassword() {
             // Automatically log in the user after reset
             setTimeout(() => {
                 loginWithToken(response.data.user, response.data.token);
-                navigate('/dashboard');
+                if (response.data.user.role === 'admin') {
+                    navigate('/admin');
+                } else {
+                    navigate('/dashboard');
+                }
             }, 2500);
         } catch (err) {
             showToast(err.message || 'Error resetting password', 'error');
@@ -123,7 +154,7 @@ export default function ResetPassword() {
                                         className="w-full pl-12 pr-12 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
                                         placeholder="Min. 8 characters"
                                         value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
+                                        onChange={(e) => checkPassword(e.target.value)}
                                     />
                                     <button 
                                         type="button"
@@ -133,6 +164,22 @@ export default function ResetPassword() {
                                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                 </div>
+                                
+                                {/* Requirement Checklist */}
+                                {password.length > 0 && (
+                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1">
+                                        {requirements.map((req, idx) => (
+                                            <div key={idx} className="flex items-center gap-2">
+                                                <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${req.met ? 'bg-emerald-500' : 'bg-gray-200'}`}>
+                                                    {req.met && <CheckCircle size={10} className="text-white" />}
+                                                </div>
+                                                <span className={`text-[10px] font-bold ${req.met ? 'text-emerald-600' : 'text-gray-400'}`}>
+                                                    {req.label}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </motion.div>
+                                )}
                             </div>
 
                             <div>

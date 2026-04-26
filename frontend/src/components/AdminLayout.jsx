@@ -10,7 +10,8 @@ import {
     ChevronRight,
     Brain,
     Menu,
-    X
+    X,
+    MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,6 +28,7 @@ export default function AdminLayout({ children }) {
         { title: 'User Management', icon: Users, path: '/admin/users' },
         { title: 'Reports', icon: FileText, path: '/admin/reports' },
         { title: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
+        { title: 'Inquiries', icon: MessageSquare, path: '/admin/inquiries' },
     ];
 
     const handleLogout = async () => {

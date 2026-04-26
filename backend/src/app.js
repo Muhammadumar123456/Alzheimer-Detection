@@ -114,13 +114,11 @@ app.use(passport.initialize());
 const googleClientId = config.google.clientId;
 const googleClientSecret = config.google.clientSecret;
 
-// DEBUG LOGS (Remove after fix)
-console.log('[DEBUG] Google Client ID detected:', googleClientId ? `Exists (${googleClientId.substring(0, 10)}...)` : 'MISSING');
-console.log('[DEBUG] Google Client Secret detected:', googleClientSecret ? 'Exists' : 'MISSING');
+const isPlaceholder = (id) => {
+    return !id || id.includes('your_google') || id.includes('YOUR_GOOGLE') || id.includes('placeholder');
+};
 
-if (googleClientId && googleClientSecret && 
-    googleClientId !== 'YOUR_GOOGLE_CLIENT_ID' && 
-    googleClientId !== 'REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID') {
+if (!isPlaceholder(googleClientId) && !isPlaceholder(googleClientSecret)) {
     passport.use(
         new GoogleStrategy(
             {
@@ -129,22 +127,19 @@ if (googleClientId && googleClientSecret &&
                 callbackURL: `${config.google.apiBaseUrl || `http://localhost:${config.port}`}${config.apiPrefix}/auth/google/callback`,
             },
             (accessToken, refreshToken, profile, done) => {
-                // Pass the profile to the route handler
                 done(null, profile);
             }
         )
     );
-    logger.info('Google OAuth strategy configured');
+    logger.info('Google OAuth strategy configured successfully');
 } else {
-    // Register a dummy strategy to prevent "Unknown authentication strategy" error
-    // but return a custom error if used.
     passport.use('google', new GoogleStrategy({
         clientID: 'placeholder',
         clientSecret: 'placeholder',
         callbackURL: 'placeholder'
     }, () => {}));
     
-    logger.warn(`Google OAuth not fully configured. ID: ${googleClientId}, Secret: ${googleClientSecret ? 'SET' : 'NOT SET'}`);
+    logger.warn('Google OAuth is NOT configured. Please set real GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env');
 }
 
 passport.serializeUser((user, done) => done(null, user));

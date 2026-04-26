@@ -7,7 +7,7 @@
  *
  * Usage:
  *   router.get('/admin-only', protect, authorize('admin'), handler);
- *   router.get('/staff', protect, authorize('admin', 'clinician'), handler);
+ *   router.get('/protected', protect, authorize('admin', 'patient'), handler);
  * =============================================================================
  */
 

@@ -20,6 +20,27 @@ export default function Signup() {
     async function handleSignup(e) {
         e.preventDefault();
         setError("");
+
+        // Validate name (letters and spaces only)
+        if (!/^[a-zA-Z\s]+$/.test(name)) {
+            setError("Name must contain only letters and spaces (no numbers or special characters).");
+            return;
+        }
+
+        // Validate email domain
+        const allowedDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'riphah.edu.pk', 'gov.pk', 'edu.pk', 'edu', 'ac.uk'];
+        const emailParts = email.split('@');
+        if (emailParts.length !== 2) {
+            setError("Please enter a valid email address.");
+            return;
+        }
+        const domain = emailParts[1].toLowerCase();
+        const isValidDomain = allowedDomains.some(d => domain === d || domain.endsWith('.' + d));
+        if (!isValidDomain) {
+            setError("Please use a proper mailing address (e.g., @gmail.com) or an institutional email.");
+            return;
+        }
+
         if (!agreedTerms) {
             setError("Please agree to the Terms & Conditions");
             return;

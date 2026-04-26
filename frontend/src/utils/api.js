@@ -71,6 +71,12 @@ export const apiPut = (endpoint, body) =>
         body: JSON.stringify(body),
     });
 
+export const apiPatch = (endpoint, body) =>
+    apiRequest(endpoint, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+    });
+
 export const apiDelete = (endpoint) =>
     apiRequest(endpoint, { method: 'DELETE' });
 

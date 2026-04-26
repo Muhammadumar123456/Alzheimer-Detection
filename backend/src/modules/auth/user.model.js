@@ -16,6 +16,7 @@ const userSchema = new mongoose.Schema(
             required: [true, 'Please provide your name'],
             trim: true,
             maxlength: [50, 'Name cannot exceed 50 characters'],
+            match: [/^[a-zA-Z\s]+$/, 'Name must contain only letters and spaces'],
         },
         email: {
             type: String,
@@ -23,10 +24,16 @@ const userSchema = new mongoose.Schema(
             unique: true,
             lowercase: true,
             trim: true,
-            match: [
-                /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-                'Please provide a valid email address',
-            ],
+            validate: {
+                validator: function (v) {
+                    const allowedDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'riphah.edu.pk', 'gov.pk', 'edu.pk', 'edu', 'ac.uk'];
+                    const parts = v.split('@');
+                    if (parts.length !== 2) return false;
+                    const domain = parts[1].toLowerCase();
+                    return allowedDomains.some(d => domain === d || domain.endsWith('.' + d));
+                },
+                message: 'Please use a proper mailing address or an institutional email',
+            },
         },
         passwordHash: {
             type: String,
@@ -37,7 +44,7 @@ const userSchema = new mongoose.Schema(
         role: {
             type: String,
             enum: {
-                values: ['patient', 'clinician', 'admin'],
+                values: ['patient', 'admin'],
                 message: '{VALUE} is not a valid role',
             },
             default: 'patient',

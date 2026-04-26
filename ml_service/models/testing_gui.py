@@ -48,7 +48,7 @@ class AttentionPooling(layers.Layer):
 
     def call(self, inputs):
         scores = self.attention_dense(inputs)
-        weights = tf.nn.softmax(scores, axis=1)
+        weights = layers.Softmax(axis=1)(scores)
         return tf.reduce_sum(inputs * weights, axis=[1, 2])
 
 # ==========================================================

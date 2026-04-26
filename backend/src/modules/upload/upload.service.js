@@ -113,7 +113,9 @@ exports.saveMRIRecord = async ({
     
     if (storageType === 'local' && path.isAbsolute(filePath)) {
         // Calculate path relative to the backend root directory
-        const backendRoot = path.join(__dirname, '..', '..');
+        // Current __dirname: backend/src/modules/upload
+        // Target backend root: .. (modules) / .. (src) / .. (backend root)
+        const backendRoot = path.join(__dirname, '..', '..', '..');
         standardizedPath = path.relative(backendRoot, filePath);
     }
 
@@ -187,7 +189,7 @@ exports.deleteMRI = async (mriId, userId) => {
     } else {
         // Local mode: delete physical file from disk
         try {
-            const absolutePath = path.resolve(__dirname, '..', '..', mri.filePath);
+            const absolutePath = path.resolve(__dirname, '..', '..', '..', mri.filePath);
             await fs.unlink(absolutePath);
             logger.info(`Physical MRI file deleted: ${mri.filePath}`);
         } catch (err) {
@@ -218,7 +220,7 @@ exports.deleteAllMRIsByUser = async (userId) => {
             await deleteFromCloud(mri.cloudinaryPublicId);
         } else {
             try {
-                const absolutePath = path.resolve(__dirname, '..', '..', mri.filePath);
+                const absolutePath = path.resolve(__dirname, '..', '..', '..', mri.filePath);
                 await fs.unlink(absolutePath);
             } catch (err) {
                 logger.warn(`Could not delete physical file: ${mri.filePath} — ${err.message}`);

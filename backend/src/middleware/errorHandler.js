@@ -27,7 +27,10 @@ const errorHandler = (err, req, res, next) => {
     // Handle specific Mongoose errors FIRST (before production fallback)
     if (err.name === 'ValidationError') {
         statusCode = 400;
-        message = 'Validation Error';
+        // Extract the specific error messages from Mongoose
+        message = Object.values(err.errors)
+            .map((val) => val.message)
+            .join(', ');
     }
 
     if (err.name === 'CastError') {

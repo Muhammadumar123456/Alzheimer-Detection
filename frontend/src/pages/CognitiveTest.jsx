@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Brain, CheckCircle, Loader2, AlertCircle, ShieldCheck, Send } from "lucide-react";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Brain, CheckCircle, Loader2, AlertCircle, ShieldCheck, Send, Upload, X } from "lucide-react";
+
 import { useNavigate, useLocation } from "react-router-dom";
 import { apiPost } from "../utils/api";
 import { useToast } from "../context/ToastContext";
@@ -102,10 +103,19 @@ export default function CognitiveTest() {
     const { showToast } = useToast();
     const mriUploadId = location.state?.mriUploadId || null;
 
-    // 30 answers: null = unanswered, 0 = No, 1 = Yes
-    const [answers, setAnswers] = useState(Array(TOTAL_QUESTIONS).fill(null));
+    // Initialize answers from sessionStorage
+    const [answers, setAnswers] = useState(() => {
+        const saved = sessionStorage.getItem("cognitive_test_draft");
+        return saved ? JSON.parse(saved) : Array(TOTAL_QUESTIONS).fill(null);
+    });
+
+    useEffect(() => {
+        sessionStorage.setItem("cognitive_test_draft", JSON.stringify(answers));
+    }, [answers]);
+
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
+    const [showMriWarning, setShowMriWarning] = useState(false);
 
     const answeredCount = answers.filter((a) => a !== null).length;
     const allAnswered = answeredCount === TOTAL_QUESTIONS;
@@ -120,41 +130,27 @@ export default function CognitiveTest() {
         });
     };
 
-    // Submit handler — sends rawAnswers to backend
-    const handleSubmit = async () => {
-        if (!allAnswered) return;
-
+    const performSubmit = async () => {
         setSubmitting(true);
         setSubmitError("");
+        setShowMriWarning(false);
 
         const symptomsReported = answers.filter((a) => a === 1).length;
 
         try {
-            if (import.meta.env.DEV) {
-                console.log("[CognitiveTest] Submitting assessment with MRI ID:", mriUploadId);
-            }
-
             const response = await apiPost("/cognitive/submit", {
                 rawAnswers: answers,
                 mriUploadId,
                 notes: `Clinical assessment: ${symptomsReported}/30 symptoms reported`,
             });
 
-            if (import.meta.env.DEV) {
-                console.log("[CognitiveTest] Submission response:", response.data);
-            }
-
-            // Extract ML prediction if the auto-prediction ran
-            const predictionData = response.data.prediction || null;
-
-            const isPending = response.data.prediction?.status === "pending";
+            // Clear draft after successful submission
+            sessionStorage.removeItem("cognitive_test_draft");
 
             showToast(
-                isPending
-                    ? "Assessment submitted — MRI analysis starting..."
-                    : response.data.prediction
-                        ? "Assessment submitted — AI analysis complete!"
-                        : "Cognitive assessment submitted successfully!",
+                response.data.prediction
+                    ? "Assessment submitted — AI analysis complete!"
+                    : "Cognitive assessment submitted successfully!",
                 "success"
             );
 
@@ -165,8 +161,7 @@ export default function CognitiveTest() {
                     totalAnswered: TOTAL_QUESTIONS,
                     symptomsReported,
                     mriUploadId,
-                    // ML prediction payload (null if no MRI was linked)
-                    prediction: predictionData,
+                    prediction: response.data.prediction || null,
                 },
             });
         } catch (err) {
@@ -176,11 +171,71 @@ export default function CognitiveTest() {
         }
     };
 
+    // Interceptor
+    const handleSubmit = () => {
+        if (!allAnswered) return;
+
+        if (!mriUploadId) {
+            setShowMriWarning(true);
+        } else {
+            performSubmit();
+        }
+    };
+
+    // Handler to save draft and navigate to upload
+    const handleRedirectToUpload = () => {
+        sessionStorage.setItem("cognitive_test_draft", JSON.stringify(answers));
+        navigate("/upload-mri");
+    };
+
     // Track global question index across sections
     let globalIndex = 0;
 
     return (
         <div className="max-w-3xl mx-auto">
+            {/* MRI Warning Modal */}
+            <AnimatePresence>
+                {showMriWarning && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white rounded-2xl p-6 sm:p-8 max-w-sm w-full shadow-2xl relative"
+                        >
+                            <button
+                                onClick={() => setShowMriWarning(false)}
+                                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                            >
+                                <X size={20} />
+                            </button>
+                            <div className="flex justify-center mb-6">
+                                <div className="p-4 bg-indigo-100 rounded-full">
+                                    <Upload className="w-8 h-8 text-indigo-600" />
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800 text-center mb-2">Complete Your Analysis</h3>
+                            <p className="text-gray-600 text-center mb-8">
+                                For a more accurate AI-powered diagnosis, please upload an MRI scan before submitting.
+                            </p>
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={handleRedirectToUpload}
+                                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors"
+                                >
+                                    Upload MRI
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            
             {/* Header */}
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
                 <div className="flex justify-center mb-4">
