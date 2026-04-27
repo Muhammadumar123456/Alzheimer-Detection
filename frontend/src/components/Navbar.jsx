@@ -8,7 +8,7 @@ export default function Navbar({ isSidebarOpen, setIsSidebarOpen, scrollToSectio
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, logout, user } = useAuth();
-  const isHomePage = location.pathname === '/' || location.pathname === '/home';
+  const isHomePage = location.pathname === '/';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleNavClick = (section) => {
@@ -16,7 +16,7 @@ export default function Navbar({ isSidebarOpen, setIsSidebarOpen, scrollToSectio
     if (isHomePage && scrollToSection) {
       scrollToSection(section);
     } else {
-      navigate('/home');
+      navigate('/');
       setTimeout(() => {
         const el = document.getElementById(section);
         if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -27,7 +27,7 @@ export default function Navbar({ isSidebarOpen, setIsSidebarOpen, scrollToSectio
   const handleLogout = () => {
     setMobileMenuOpen(false);
     logout();
-    navigate('/home');
+    navigate('/');
   };
 
   const handleNavigate = (path) => {
@@ -56,7 +56,7 @@ export default function Navbar({ isSidebarOpen, setIsSidebarOpen, scrollToSectio
             <motion.div
               className="flex items-center gap-3 cursor-pointer group"
               whileHover={{ scale: 1.02 }}
-              onClick={() => navigate('/home')}
+              onClick={() => navigate('/')}
             >
               <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200 group-hover:rotate-12 transition-transform">
                 <Brain className="w-6 h-6 text-white" />

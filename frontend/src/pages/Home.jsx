@@ -35,6 +35,13 @@ export default function Home() {
         navigate(path);
     };
 
+    const scrollToSection = (sectionId) => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
     const features = [
         { title: 'Upload MRI', description: 'Upload brain MRI scans for AI-powered analysis and early detection.', icon: Upload, gradient: 'from-blue-500 to-cyan-500', emoji: '🧠', action: '/upload-mri' },
         { title: 'Cognitive Test', description: 'Take comprehensive cognitive assessments to evaluate brain health.', icon: Brain, gradient: 'from-purple-500 to-pink-500', emoji: '📝', action: '/cognitive-test' },
@@ -50,8 +57,8 @@ export default function Home() {
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-            <Navbar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+        <div id="home" className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+            <Navbar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} scrollToSection={scrollToSection} />
             <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">

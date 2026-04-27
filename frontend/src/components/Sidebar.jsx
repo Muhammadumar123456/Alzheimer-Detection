@@ -24,7 +24,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
   const { user, isAuthenticated, logout } = useAuth();
 
   const menuItems = [
-    { icon: Home, label: 'Home', path: '/home', delay: 0.3 },
+    { icon: Home, label: 'Home', path: '/', delay: 0.3 },
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', delay: 0.35 },
     { icon: Upload, label: 'Upload MRI', path: '/upload-mri', delay: 0.4 },
     { icon: Brain, label: 'Cognitive Test', path: '/cognitive-test', delay: 0.45 },
@@ -41,7 +41,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
   const handleLogoutClick = () => {
     setIsSidebarOpen(false);
     logout();
-    navigate('/home');
+    navigate('/');
   };
 
   return (

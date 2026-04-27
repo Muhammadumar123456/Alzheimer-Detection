@@ -20,7 +20,7 @@ export default function AppNavbar({ isSidebarOpen, setIsSidebarOpen }) {
     const handleLogout = () => {
         setMobileOpen(false);
         logout();
-        navigate('/home');
+        navigate('/');
     };
     const handleNav = (path) => {
         setMobileOpen(false);
@@ -34,7 +34,7 @@ export default function AppNavbar({ isSidebarOpen, setIsSidebarOpen }) {
                 <div className="flex justify-between items-center h-16">
                     {/* LEFT SIDE: Logo + Sidebar Trigger */}
                     <div className="flex items-center gap-4">
-                        <motion.div className="flex items-center gap-2.5 cursor-pointer" whileHover={{ scale: 1.03 }} onClick={() => handleNav('/home')}>
+                        <motion.div className="flex items-center gap-2.5 cursor-pointer" whileHover={{ scale: 1.03 }} onClick={() => handleNav('/')}>
                             <div className="p-1.5 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg">
                                 <Brain className="w-5 h-5 text-white" />
                             </div>
