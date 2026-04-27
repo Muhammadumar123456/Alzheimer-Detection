@@ -1,16 +1,26 @@
-# React + Vite
+# Alzheimer Disease Detection System (Multimodal)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A sophisticated medical diagnosis platform for early detection of Alzheimer's Disease using MRI scans and Cognitive Assessment.
 
-Currently, two official plugins are available:
+## 🔗 Quick Links
+- **Detailed Documentation:** [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md)
+- **Technical Architecture:** [DOCUMENTATION.md](./DOCUMENTATION.md)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🌟 Key Features
+- **Multimodal AI:** Combined MRI (Deep Learning) + Cognitive Test analysis.
+- **Microservices:** Decoupled Node.js backend and Python FastAPI ML service.
+- **Real-time:** Live prediction tracking with confidence meters.
+- **Secure:** Role-based access control, JWT, and encrypted sessions.
 
-## React Compiler
+## 🛠 Tech Stack
+- **Frontend:** React 19, TailwindCSS, Framer Motion, Recharts.
+- **Backend:** Node.js, Express, MongoDB, Redis (BullMQ).
+- **Machine Learning:** Python, TensorFlow/Keras, InceptionV3, MobileNet.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🚀 How to Run
+1.  **Backend:** `cd backend && npm install && npm run dev`
+2.  **Frontend:** `cd frontend && npm install && npm run dev`
+3.  **ML Service:** `cd ml_service && pip install -r requirements.txt && python main.py`
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+*Developed for medical research and early diagnostic support.*

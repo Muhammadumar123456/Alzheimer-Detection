@@ -146,13 +146,3 @@ vite.config.ts.timestamp-*
 *.njsproj
 *.sln
 *.sw?
-
-# ML Models
-*.keras
-*.h5
-
-# Python
-venv/
-.venv/
-__pycache__/
-*.pyc
